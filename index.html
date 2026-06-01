@@ -240,11 +240,19 @@ const state = {
 };
 
 // ─── API Fetch 工具函式 ───────────────────────────────────────
-async function fetchWithTimeout(url, timeout = 6000) {
+// CORS Proxy：讓瀏覽器可以存取跨域 API
+const PROXY = 'https://api.allorigins.win/raw?url=';
+
+function proxied(url) {
+  return PROXY + encodeURIComponent(url);
+}
+
+async function fetchWithTimeout(url, timeout = 8000, useProxy = true) {
+  const finalUrl = useProxy ? proxied(url) : url;
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
   try {
-    const res = await fetch(url, { signal: controller.signal, mode: 'cors' });
+    const res = await fetch(finalUrl, { signal: controller.signal });
     clearTimeout(id);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
@@ -256,11 +264,13 @@ async function fetchWithTimeout(url, timeout = 6000) {
 
 function setDashboard(id, text, ok = true) {
   const el = document.getElementById(id);
-  if (el) el.textContent = text;
-  if (!ok) el && (el.style.opacity = '0.5');
+  if (el) {
+    el.textContent = text;
+    el.style.opacity = ok ? '1' : '0.45';
+  }
 }
 
-// ① 台電即時發電資料
+// ① 台電即時發電資料（透過 CORS Proxy）
 async function fetchTaiwanPower() {
   try {
     const data = await fetchWithTimeout(
@@ -276,8 +286,8 @@ async function fetchTaiwanPower() {
       if (nuclear) state.countries[0].nuclear = Math.round(parseFloat(nuclear['裝置容量(MW)']) / 100) || 20;
       if (wind)    state.countries[0].wind    = Math.round(parseFloat(wind['裝置容量(MW)'])    / 100) || 5;
 
-      const solarMW = solar   ? parseFloat(solar['裝置容量(MW)']).toFixed(0)   : '--';
-      const totalMW = total   ? parseFloat(total['裝置容量(MW)']).toFixed(0)   : '--';
+      const solarMW = solar ? parseFloat(solar['裝置容量(MW)']).toFixed(0) : '--';
+      const totalMW = total ? parseFloat(total['裝置容量(MW)']).toFixed(0) : '--';
 
       setDashboard('rt-solar', `${solarMW} MW`);
       setDashboard('rt-power', `${totalMW} MW`);
@@ -285,14 +295,14 @@ async function fetchTaiwanPower() {
       return true;
     }
   } catch (e) {
-    setDashboard('rt-solar', '無法連線', false);
-    setDashboard('rt-power', '無法連線', false);
+    setDashboard('rt-solar', '無法連線 --', false);
+    setDashboard('rt-power', '無法連線 --', false);
     addLog('⚠ 台電API暫時無法連線');
   }
   return false;
 }
 
-// ② Yahoo Finance 油價（WTI，無需 API key）
+// ② Yahoo Finance 油價（WTI，透過 CORS Proxy）
 async function fetchOilPrice() {
   try {
     const data = await fetchWithTimeout(
@@ -307,30 +317,31 @@ async function fetchOilPrice() {
       return true;
     }
   } catch (e) {
-    // fallback 小幅波動
     const xom = state.stocks.find(s => s.ticker === 'XOM');
     if (xom) xom.price = Math.max(50, xom.price * (0.98 + Math.random() * 0.04));
-    setDashboard('rt-oil', '無法連線', false);
+    setDashboard('rt-oil', '無法連線 --', false);
     addLog('⚠ 油價API暫時無法連線，使用模擬波動');
   }
   return false;
 }
 
-// ③ 環保署空氣品質 AQI（台灣，完全免費）
+// ③ 環保署 AQI（台灣，透過 CORS Proxy）
 async function fetchAQI() {
   try {
     const data = await fetchWithTimeout(
-      'https://data.epa.gov.tw/api/v2/aqx_p_432?api_key=9be7b239-557b-4c10-9775-78cadfc555e9&limit=5&sort=ImportDate desc&format=json'
+      'https://data.epa.gov.tw/api/v2/aqx_p_432?api_key=9be7b239-557b-4c10-9775-78cadfc555e9&limit=10&sort=ImportDate desc&format=json'
     );
     const records = data?.records;
     if (records && records.length > 0) {
-      // 取台中站或第一筆
       const tc = records.find(r => r.sitename && r.sitename.includes('台中')) || records[0];
       const aqi = parseInt(tc.aqi) || 0;
-      let aqiLabel = aqi <= 50 ? '良好🟢' : aqi <= 100 ? '普通🟡' : aqi <= 150 ? '對敏感族群不良🟠' : '不良🔴';
+      const aqiLabel = aqi <= 50  ? '良好🟢'
+                     : aqi <= 100 ? '普通🟡'
+                     : aqi <= 150 ? '敏感不良🟠'
+                     : '不良🔴';
       setDashboard('rt-aqi', `AQI ${aqi} ${aqiLabel}`);
 
-      // 遊戲影響：AQI 高 → 煤炭佔比上升帶來懲罰
+      // 遊戲連動：AQI 高 → 煤炭佔比受懲罰
       if (aqi > 100 && state.energy.coal > 10) {
         state.energy.coal = Math.max(5, state.energy.coal - 1);
         addLog(`⚠ 空汙警示！AQI ${aqi}，煤炭佔比下調`);
@@ -339,27 +350,31 @@ async function fetchAQI() {
       return true;
     }
   } catch (e) {
-    setDashboard('rt-aqi', '無法連線', false);
+    setDashboard('rt-aqi', '無法連線 --', false);
     addLog('⚠ 環保署AQI API暫時無法連線');
   }
   return false;
 }
 
-// ④ 世界銀行：台灣用電量 + 全球碳排（歷史數據，穩定）
+// ④ 世界銀行：台灣用電 + 全球碳排（不需 Proxy，世銀原生支援 CORS）
 async function fetchWorldBankData() {
   try {
-    // 台灣人均用電量（kWh）
+    // 台灣人均用電量（kWh）—— 世銀原生支援 CORS，不需 proxy
     const twData = await fetchWithTimeout(
-      'https://api.worldbank.org/v2/country/TW/indicator/EG.USE.ELEC.KH.PC?format=json&mrv=1'
+      'https://api.worldbank.org/v2/country/TW/indicator/EG.USE.ELEC.KH.PC?format=json&mrv=1',
+      8000,
+      false  // 世銀不需要 proxy
     );
     const twVal = twData?.[1]?.[0];
     if (twVal && twVal.value) {
       setDashboard('rt-twenergy', `${Math.round(twVal.value).toLocaleString()} kWh/人`);
     }
 
-    // 全球 CO2 排放（kt）
+    // 全球 CO2 排放
     const co2Data = await fetchWithTimeout(
-      'https://api.worldbank.org/v2/country/WLD/indicator/EN.ATM.CO2E.KT?format=json&mrv=1'
+      'https://api.worldbank.org/v2/country/WLD/indicator/EN.ATM.CO2E.KT?format=json&mrv=1',
+      8000,
+      false  // 世銀不需要 proxy
     );
     const co2Val = co2Data?.[1]?.[0];
     if (co2Val && co2Val.value) {
@@ -369,8 +384,8 @@ async function fetchWorldBankData() {
     }
     return true;
   } catch (e) {
-    setDashboard('rt-twenergy', '無法連線', false);
-    setDashboard('rt-carbon',   '無法連線', false);
+    setDashboard('rt-twenergy', '無法連線 --', false);
+    setDashboard('rt-carbon',   '無法連線 --', false);
     addLog('⚠ 世界銀行API暫時無法連線');
   }
   return false;
