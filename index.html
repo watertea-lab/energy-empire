@@ -202,20 +202,28 @@
 </div>
 
 <script>
+// ═══════════════════════════════════════════════
+// ⚙️  設定區：上傳 GitHub 前把 key 換成 'YOUR_KEY'
+// ═══════════════════════════════════════════════
+const CONFIG = {
+  FINNHUB_KEY: 'd8erbipr01qub7kee6i0d8erbipr01qub7kee6ig'  // ← 把這裡換成你的 Finnhub API key
+};
+// ═══════════════════════════════════════════════
+
 // ─── Game State ───────────────────────────────────────────────
 const state = {
   turn: 1,
   cash: 10000,
   energy: { solar: 15, oil: 35, coal: 25, nuclear: 15, wind: 10 },
   stocks: [
-    { ticker: 'XOM',    name: 'ExxonMobil', price: 105, type: 'oil' },
-    { ticker: 'NEE',    name: 'NextEra',    price: 75,  type: 'solar' },
-    { ticker: 'ORSTED', name: 'Ørsted',     price: 50,  type: 'wind' },
-    { ticker: 'CCJ',    name: 'Cameco',     price: 42,  type: 'nuclear' },
-    { ticker: '601857', name: '中國石油',   price: 12,  type: 'oil' },
-    { ticker: '600688', name: '上海石化',   price: 8.5, type: 'oil' },
-    { ticker: '600905', name: '三峽能源',   price: 28,  type: 'wind' },
-    { ticker: '688798', name: '寧德時代',   price: 180, type: 'solar' }
+    { ticker: 'XOM',    name: 'ExxonMobil', price: 105, type: 'oil',     real: true },
+    { ticker: 'NEE',    name: 'NextEra',    price: 75,  type: 'solar',   real: true },
+    { ticker: 'ORSTED', name: 'Ørsted',     price: 50,  type: 'wind',    real: false },
+    { ticker: 'CCJ',    name: 'Cameco',     price: 42,  type: 'nuclear', real: true },
+    { ticker: '601857', name: '中國石油',   price: 12,  type: 'oil',     real: false },
+    { ticker: '600688', name: '上海石化',   price: 8.5, type: 'oil',     real: false },
+    { ticker: '600905', name: '三峽能源',   price: 28,  type: 'wind',    real: false },
+    { ticker: '688798', name: '寧德時代',   price: 180, type: 'solar',   real: false }
   ],
   // CRUD: 持倉紀錄 { ticker, name, qty, avgCost }
   portfolio: [],
@@ -436,21 +444,55 @@ async function fetchWorldBankData() {
   return false;
 }
 
-// ⑤ 初始化所有 API
+// ⑤ Finnhub 真實美股股價
+async function fetchRealStocks() {
+  if (!CONFIG.FINNHUB_KEY || CONFIG.FINNHUB_KEY === 'd8erbipr01qub7kee6i0d8erbipr01qub7kee6ig') {
+    addLog('⚠ 請設定 Finnhub API key');
+    return false;
+  }
+  const realStocks = state.stocks.filter(s => s.real);
+  let successCount = 0;
+  for (const stock of realStocks) {
+    try {
+      const data = await fetchDirect(
+        `https://finnhub.io/api/v1/quote?symbol=${stock.ticker}&token=${CONFIG.FINNHUB_KEY}`
+      );
+      if (data?.c && data.c > 0) {
+        const prev = stock.price;
+        stock.price = data.c;
+        stock.prevClose = data.pc;
+        const change = ((data.c - data.pc) / data.pc * 100).toFixed(2);
+        addLog(`✓ ${stock.ticker}: $${data.c.toFixed(2)} (${change >= 0 ? '+' : ''}${change}%)`);
+        successCount++;
+      }
+      // Finnhub 免費版限速，每次間隔 300ms
+      await new Promise(r => setTimeout(r, 300));
+    } catch (e) {
+      addLog(`⚠ ${stock.ticker} 股價取得失敗`);
+    }
+  }
+  if (successCount > 0) {
+    addLog(`✓ 真實股價已更新 ${successCount}/${realStocks.length} 支`);
+    render();
+    return true;
+  }
+  return false;
+}
 async function initAPIs() {
   updateApiDot('loading');
   const results = await Promise.allSettled([
     fetchTaiwanPower(),
     fetchOilPrice(),
     fetchAQI(),
-    fetchWorldBankData()
+    fetchWorldBankData(),
+    fetchRealStocks()   // ← Finnhub 真實股價
   ]);
   const anyOk = results.some(r => r.value === true);
   state.apiStatus = anyOk ? 'ok' : 'fail';
   updateApiDot(state.apiStatus);
   render();
 
-  // 定期更新（快速更新：台電+油價+AQI 每60秒；世銀數據每10分鐘）
+  // 定期更新
   setInterval(() => {
     fetchTaiwanPower();
     fetchOilPrice();
@@ -458,6 +500,8 @@ async function initAPIs() {
     render();
   }, 60000);
   setInterval(() => { fetchWorldBankData(); }, 600000);
+  // 股價每5分鐘更新（Finnhub 免費版限速）
+  setInterval(() => { fetchRealStocks(); }, 300000);
 }
 
 function updateApiDot(status) {
