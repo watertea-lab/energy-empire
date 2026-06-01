@@ -240,19 +240,37 @@ const state = {
 };
 
 // ─── API Fetch 工具函式 ───────────────────────────────────────
-// CORS Proxy：讓瀏覽器可以存取跨域 API
-const PROXY = 'https://api.allorigins.win/raw?url=';
+// 多個 CORS Proxy，依序嘗試
+const PROXIES = [
+  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  url => `https://thingproxy.freeboard.io/fetch/${url}`
+];
 
-function proxied(url) {
-  return PROXY + encodeURIComponent(url);
+async function fetchViaProxy(url, timeout = 8000) {
+  for (const makeProxy of PROXIES) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    try {
+      const res = await fetch(makeProxy(url), { signal: controller.signal });
+      clearTimeout(id);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      if (text.includes('Host not in allowlist') || text.trim() === '') throw new Error('blocked');
+      return JSON.parse(text);
+    } catch (e) {
+      clearTimeout(id);
+      // 這個 proxy 失敗，試下一個
+    }
+  }
+  throw new Error('所有 Proxy 均失敗');
 }
 
-async function fetchWithTimeout(url, timeout = 8000, useProxy = true) {
-  const finalUrl = useProxy ? proxied(url) : url;
+async function fetchDirect(url, timeout = 8000) {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
   try {
-    const res = await fetch(finalUrl, { signal: controller.signal });
+    const res = await fetch(url, { signal: controller.signal });
     clearTimeout(id);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
@@ -270,42 +288,44 @@ function setDashboard(id, text, ok = true) {
   }
 }
 
-// ① 台電即時發電資料（透過 CORS Proxy）
+// ① Open-Meteo 太陽輻射 + 風速（台灣台北，完全免費無需 key，原生支援 CORS）
 async function fetchTaiwanPower() {
   try {
-    const data = await fetchWithTimeout(
-      'https://data.taipower.com.tw/opendata/apply/file/d006001/001.json'
+    // Open-Meteo：台灣當前太陽輻射(W/m²) & 風速(km/h)
+    const data = await fetchDirect(
+      'https://api.open-meteo.com/v1/forecast?latitude=25.04&longitude=121.53&current=shortwave_radiation,wind_speed_10m,temperature_2m&timezone=Asia%2FTaipei'
     );
-    if (data && Array.isArray(data)) {
-      const solar   = data.find(d => d['能源別'] && d['能源別'].includes('太陽'));
-      const nuclear = data.find(d => d['能源別'] && d['能源別'].includes('核能'));
-      const wind    = data.find(d => d['能源別'] && d['能源別'].includes('風力'));
-      const total   = data.find(d => d['能源別'] && d['能源別'].includes('合計'));
+    if (data?.current) {
+      const radiation = data.current.shortwave_radiation ?? 0;  // W/m²
+      const windSpeed = data.current.wind_speed_10m ?? 0;        // km/h
+      const temp      = data.current.temperature_2m ?? 0;
 
-      if (solar)   state.countries[0].solar   = Math.round(parseFloat(solar['裝置容量(MW)'])   / 100) || 15;
-      if (nuclear) state.countries[0].nuclear = Math.round(parseFloat(nuclear['裝置容量(MW)']) / 100) || 20;
-      if (wind)    state.countries[0].wind    = Math.round(parseFloat(wind['裝置容量(MW)'])    / 100) || 5;
+      // 轉換成遊戲用數字（模擬發電量）
+      const solarEst = Math.round(radiation * 0.15); // 粗估 MW（依輻射）
+      const windEst  = Math.round(windSpeed * 12);   // 粗估 MW（依風速）
 
-      const solarMW = solar ? parseFloat(solar['裝置容量(MW)']).toFixed(0) : '--';
-      const totalMW = total ? parseFloat(total['裝置容量(MW)']).toFixed(0) : '--';
+      setDashboard('rt-solar', `☀️ ${radiation} W/m²（約${solarEst}MW）`);
+      setDashboard('rt-power', `🌡️ ${temp}°C 風${windSpeed}km/h`);
 
-      setDashboard('rt-solar', `${solarMW} MW`);
-      setDashboard('rt-power', `${totalMW} MW`);
-      addLog('✓ 台電即時發電資料已更新');
+      // 更新遊戲能源佔比
+      if (radiation > 300) state.energy.solar = Math.min(40, state.energy.solar + 1);
+      if (windSpeed > 20)  state.energy.wind  = Math.min(30, state.energy.wind + 1);
+
+      addLog(`✓ 台灣即時天氣：太陽輻射${radiation}W/m²，風速${windSpeed}km/h`);
       return true;
     }
   } catch (e) {
     setDashboard('rt-solar', '無法連線 --', false);
     setDashboard('rt-power', '無法連線 --', false);
-    addLog('⚠ 台電API暫時無法連線');
+    addLog('⚠ Open-Meteo API 暫時無法連線');
   }
   return false;
 }
 
-// ② Yahoo Finance 油價（WTI，透過 CORS Proxy）
+// ② Yahoo Finance 油價（WTI，透過 Proxy）
 async function fetchOilPrice() {
   try {
-    const data = await fetchWithTimeout(
+    const data = await fetchViaProxy(
       'https://query1.finance.yahoo.com/v8/finance/chart/CL=F?interval=1d&range=1d'
     );
     const price = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
@@ -325,62 +345,56 @@ async function fetchOilPrice() {
   return false;
 }
 
-// ③ 環保署 AQI（台灣，透過 CORS Proxy）
+// ③ Open-Meteo 空氣品質（PM2.5，台灣，完全免費原生CORS）
 async function fetchAQI() {
   try {
-    const data = await fetchWithTimeout(
-      'https://data.epa.gov.tw/api/v2/aqx_p_432?api_key=9be7b239-557b-4c10-9775-78cadfc555e9&limit=10&sort=ImportDate desc&format=json'
+    const data = await fetchDirect(
+      'https://air-quality-api.open-meteo.com/v1/air-quality?latitude=25.04&longitude=121.53&current=pm2_5,pm10,carbon_monoxide&timezone=Asia%2FTaipei'
     );
-    const records = data?.records;
-    if (records && records.length > 0) {
-      const tc = records.find(r => r.sitename && r.sitename.includes('台中')) || records[0];
-      const aqi = parseInt(tc.aqi) || 0;
+    if (data?.current) {
+      const pm25 = data.current.pm2_5 ?? 0;
+      const pm10 = data.current.pm10  ?? 0;
+      // 換算成 AQI 近似值
+      const aqi = Math.round(pm25 * 4.5);
       const aqiLabel = aqi <= 50  ? '良好🟢'
                      : aqi <= 100 ? '普通🟡'
                      : aqi <= 150 ? '敏感不良🟠'
                      : '不良🔴';
-      setDashboard('rt-aqi', `AQI ${aqi} ${aqiLabel}`);
+      setDashboard('rt-aqi', `PM2.5: ${pm25.toFixed(1)} μg/m³ ${aqiLabel}`);
 
-      // 遊戲連動：AQI 高 → 煤炭佔比受懲罰
-      if (aqi > 100 && state.energy.coal > 10) {
+      // 遊戲連動：PM2.5 高 → 煤炭受懲罰
+      if (pm25 > 25 && state.energy.coal > 10) {
         state.energy.coal = Math.max(5, state.energy.coal - 1);
-        addLog(`⚠ 空汙警示！AQI ${aqi}，煤炭佔比下調`);
+        addLog(`⚠ 空汙警示！PM2.5=${pm25.toFixed(1)}，煤炭佔比下調`);
       }
-      addLog(`✓ 台灣AQI: ${aqi} (${tc.sitename || ''})`);
+      addLog(`✓ 台灣PM2.5: ${pm25.toFixed(1)} μg/m³`);
       return true;
     }
   } catch (e) {
     setDashboard('rt-aqi', '無法連線 --', false);
-    addLog('⚠ 環保署AQI API暫時無法連線');
+    addLog('⚠ 空氣品質API暫時無法連線');
   }
   return false;
 }
 
-// ④ 世界銀行：台灣用電 + 全球碳排（不需 Proxy，世銀原生支援 CORS）
+// ④ 世界銀行：台灣用電 + 全球碳排（原生支援 CORS，不需 Proxy）
 async function fetchWorldBankData() {
   try {
-    // 台灣人均用電量（kWh）—— 世銀原生支援 CORS，不需 proxy
-    const twData = await fetchWithTimeout(
-      'https://api.worldbank.org/v2/country/TW/indicator/EG.USE.ELEC.KH.PC?format=json&mrv=1',
-      8000,
-      false  // 世銀不需要 proxy
-    );
-    const twVal = twData?.[1]?.[0];
-    if (twVal && twVal.value) {
+    const [twData, co2Data] = await Promise.all([
+      fetchDirect('https://api.worldbank.org/v2/country/TW/indicator/EG.USE.ELEC.KH.PC?format=json&mrv=1'),
+      fetchDirect('https://api.worldbank.org/v2/country/WLD/indicator/EN.ATM.CO2E.KT?format=json&mrv=1')
+    ]);
+
+    const twVal  = twData?.[1]?.[0];
+    const co2Val = co2Data?.[1]?.[0];
+
+    if (twVal?.value) {
       setDashboard('rt-twenergy', `${Math.round(twVal.value).toLocaleString()} kWh/人`);
     }
-
-    // 全球 CO2 排放
-    const co2Data = await fetchWithTimeout(
-      'https://api.worldbank.org/v2/country/WLD/indicator/EN.ATM.CO2E.KT?format=json&mrv=1',
-      8000,
-      false  // 世銀不需要 proxy
-    );
-    const co2Val = co2Data?.[1]?.[0];
-    if (co2Val && co2Val.value) {
+    if (co2Val?.value) {
       const gt = (co2Val.value / 1e6).toFixed(1);
       setDashboard('rt-carbon', `${gt} Gt CO₂`);
-      addLog(`✓ 世界銀行：全球碳排 ${gt} Gt`);
+      addLog(`✓ 世界銀行：全球碳排 ${gt} Gt，台灣用電 ${Math.round(twVal?.value||0).toLocaleString()} kWh/人`);
     }
     return true;
   } catch (e) {
