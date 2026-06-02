@@ -2,1081 +2,1019 @@
 <html lang="zh-TW" class="h-full">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Energy Empire</title>
-  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
-  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+TC:wght@300;400;700&display=swap"
-    rel="stylesheet">
-  <style>
-    * {
-      box-sizing: border-box;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Energy Empire</title>
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+TC:wght@300;400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
 
-    html,
-    body {
-      width: 100%;
-      height: 100%;
-      margin: 0;
-      padding: 0;
-      -webkit-user-select: none;
-      user-select: none;
-      -webkit-touch-callout: none;
-    }
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+        }
 
-    body {
-      -webkit-font-smoothing: antialiased;
-      -webkit-tap-highlight-color: transparent;
-    }
+        body {
+            -webkit-font-smoothing: antialiased;
+            -webkit-tap-highlight-color: transparent;
+        }
 
-    #app {
-      width: 100%;
-      height: 100%;
-    }
+        #app {
+            width: 100%;
+            height: 100%;
+        }
 
-    .globe-canvas {
-      display: block;
-      width: 100%;
-      height: 100%;
-      touch-action: none;
-    }
+        .globe-canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
 
-    .glow {
-      text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
-    }
+        .glow {
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
 
-    .panel {
-      backdrop-filter: blur(12px);
-      background: rgba(10, 20, 30, 0.85);
-      border: 1px solid rgba(0, 255, 136, 0.2);
-    }
+        .panel {
+            backdrop-filter: blur(12px);
+            background: rgba(10, 20, 30, 0.85);
+            border: 1px solid rgba(0, 255, 136, 0.2);
+        }
 
-    @keyframes slideUp {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
-      }
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
 
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
 
-    .slide-up {
-      animation: slideUp 0.6s ease forwards;
-    }
+        .slide-up {
+            animation: slideUp 0.6s ease forwards;
+        }
 
-    .safe-area {
-      padding-left: env(safe-area-inset-left);
-      padding-right: env(safe-area-inset-right);
-      padding-top: env(safe-area-inset-top);
-    }
+        .safe-area {
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+            padding-top: env(safe-area-inset-top);
+        }
 
-    @media (max-width: 640px) {
-      .panel {
-        padding: 0.75rem;
-      }
+        @media (max-width: 640px) {
+            .panel {
+                padding: 0.75rem;
+            }
 
-      header {
-        min-height: 50px;
-      }
-    }
+            header {
+                min-height: 50px;
+            }
+        }
 
-    /* Modal */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.7);
-      z-index: 50;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-    .modal-box {
-      background: #0a141e;
-      border: 1px solid rgba(0, 255, 136, 0.4);
-      border-radius: 12px;
-      padding: 1.5rem;
-      min-width: 280px;
-      max-width: 90vw;
-      color: #a7f3d0;
-    }
+        .modal-box {
+            background: #0a141e;
+            border: 1px solid rgba(0, 255, 136, 0.4);
+            border-radius: 12px;
+            padding: 1.5rem;
+            min-width: 280px;
+            max-width: 90vw;
+            color: #a7f3d0;
+        }
 
-    .modal-box input,
-    .modal-box select {
-      background: rgba(0, 255, 136, 0.08);
-      border: 1px solid rgba(0, 255, 136, 0.3);
-      color: #a7f3d0;
-      border-radius: 6px;
-      padding: 6px 10px;
-      width: 100%;
-      margin-top: 4px;
-      font-size: 13px;
-    }
+        .modal-box input,
+        .modal-box select {
+            background: rgba(0, 255, 136, 0.08);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            color: #a7f3d0;
+            border-radius: 6px;
+            padding: 6px 10px;
+            width: 100%;
+            margin-top: 4px;
+            font-size: 13px;
+        }
 
-    .modal-box label {
-      font-size: 12px;
-      color: #6ee7b7;
-      display: block;
-      margin-top: 10px;
-    }
+        .modal-box label {
+            font-size: 12px;
+            color: #6ee7b7;
+            display: block;
+            margin-top: 10px;
+        }
 
-    .btn-green {
-      background: rgba(0, 255, 136, 0.15);
-      border: 1px solid rgba(0, 255, 136, 0.4);
-      color: #00ff88;
-      border-radius: 6px;
-      padding: 6px 16px;
-      cursor: pointer;
-      font-size: 13px;
-      transition: background 0.2s;
-    }
+        .btn-green {
+            background: rgba(0, 255, 136, 0.15);
+            border: 1px solid rgba(0, 255, 136, 0.4);
+            color: #00ff88;
+            border-radius: 6px;
+            padding: 6px 16px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
 
-    .btn-green:hover {
-      background: rgba(0, 255, 136, 0.3);
-    }
+        .btn-green:hover {
+            background: rgba(0, 255, 136, 0.3);
+        }
 
-    .btn-red {
-      background: rgba(255, 80, 80, 0.15);
-      border: 1px solid rgba(255, 80, 80, 0.4);
-      color: #f87171;
-      border-radius: 6px;
-      padding: 6px 16px;
-      cursor: pointer;
-      font-size: 13px;
-    }
+        .btn-red {
+            background: rgba(255, 80, 80, 0.15);
+            border: 1px solid rgba(255, 80, 80, 0.4);
+            color: #f87171;
+            border-radius: 6px;
+            padding: 6px 16px;
+            cursor: pointer;
+            font-size: 13px;
+        }
 
-    .btn-gray {
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      color: #9ca3af;
-      border-radius: 6px;
-      padding: 6px 16px;
-      cursor: pointer;
-      font-size: 13px;
-    }
+        .btn-gray {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #9ca3af;
+            border-radius: 6px;
+            padding: 6px 16px;
+            cursor: pointer;
+            font-size: 13px;
+        }
 
-    /* Portfolio table */
-    .portfolio-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 4px 0;
-      border-bottom: 1px solid rgba(0, 255, 136, 0.08);
-      font-size: 12px;
-      gap: 4px;
-    }
+        /* Portfolio table */
+        .portfolio-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(0, 255, 136, 0.08);
+            font-size: 12px;
+            gap: 4px;
+        }
 
-    .portfolio-row:last-child {
-      border-bottom: none;
-    }
+        .portfolio-row:last-child {
+            border-bottom: none;
+        }
 
-    /* API status dot */
-    .api-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      display: inline-block;
-      margin-right: 4px;
-    }
+        /* API status dot */
+        .api-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 4px;
+        }
 
-    .api-dot.ok {
-      background: #00ff88;
-    }
+        .api-dot.ok {
+            background: #00ff88;
+        }
 
-    .api-dot.fail {
-      background: #f87171;
-    }
+        .api-dot.fail {
+            background: #f87171;
+        }
 
-    .api-dot.loading {
-      background: #fbbf24;
-      animation: pulse 1s infinite;
-    }
+        .api-dot.loading {
+            background: #fbbf24;
+            animation: pulse 1s infinite;
+        }
 
-    @keyframes pulse {
+        @keyframes pulse {
 
-      0%,
-      100% {
-        opacity: 1
-      }
+            0%,
+            100% {
+                opacity: 1
+            }
 
-      50% {
-        opacity: 0.4
-      }
-    }
-  </style>
+            50% {
+                opacity: 0.4
+            }
+        }
+    </style>
 </head>
 
 <body class="h-full w-full overflow-hidden" style="background: #0a0e1a; font-family: 'Noto Sans TC', sans-serif;">
-  <div id="app" class="h-full w-full relative flex flex-col">
+    <div id="app" class="h-full w-full relative flex flex-col">
 
-    <!-- Header -->
-    <header class="flex items-center justify-between px-3 sm:px-6 py-2 border-b border-emerald-900/40 safe-area"
-      style="background: rgba(5,10,20,0.9);">
-      <h1 class="text-lg sm:text-xl font-bold glow" style="font-family:'Orbitron',monospace; color:#00ff88;">Energy
-        Empire</h1>
-      <div class="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-emerald-300">
-        <span>回合: <strong id="turn-num">1</strong></span>
-        <span>資金: $<strong id="player-cash">10000</strong>M</span>
-        <span id="api-status" title="API連線狀態"><span class="api-dot loading"></span></span>
-      </div>
-    </header>
-
-    <!-- Main -->
-    <div class="flex-1 flex flex-col overflow-hidden">
-
-      <!-- Globe Section -->
-      <div class="flex-1 relative flex items-center justify-center" style="min-height:0;">
-        <canvas id="globe" class="globe-canvas"></canvas>
-
-        <!-- Country Info -->
-        <div id="country-info"
-          class="hidden absolute top-3 left-3 sm:top-4 sm:left-4 panel rounded-lg p-3 text-emerald-200 text-xs sm:text-sm slide-up"
-          style="min-width:160px;max-width:200px;z-index:10;">
-          <h3 id="ci-name" class="text-emerald-400 font-bold text-sm mb-2"></h3>
-          <div id="ci-details" style="line-height:1.4;"></div>
-        </div>
-      </div>
-
-      <!-- Bottom Panel -->
-      <aside class="w-full overflow-y-auto p-2 sm:p-3 space-y-2 sm:space-y-3 border-t border-emerald-900/30"
-        style="background:rgba(5,10,20,0.95);max-height:50%;-webkit-overflow-scrolling:touch;">
-
-        <!-- Energy Market -->
-        <div class="panel rounded-lg p-2 sm:p-4 slide-up">
-          <h2 class="text-emerald-400 font-bold mb-2 flex items-center gap-1 text-xs sm:text-sm"
-            style="font-family:'Orbitron',monospace;">
-            <i data-lucide="zap" style="width:14px;height:14px;"></i> 能源市場
-          </h2>
-          <div id="energy-market" class="space-y-1 text-xs"></div>
-        </div>
-
-        <!-- 即時數據儀表板 -->
-        <div class="panel rounded-lg p-2 sm:p-4 slide-up" style="animation-delay:0.05s;">
-          <h2 class="text-emerald-400 font-bold mb-2 flex items-center gap-1 text-xs sm:text-sm"
-            style="font-family:'Orbitron',monospace;">
-            <i data-lucide="activity" style="width:14px;height:14px;"></i> 即時數據
-          </h2>
-          <div id="realtime-dashboard" class="grid grid-cols-2 gap-1 text-xs">
-            <div class="bg-emerald-900/20 rounded p-1.5 border border-emerald-800/30">
-              <div class="text-emerald-500 text-xs mb-0.5">🛢️ WTI油價</div>
-              <div id="rt-oil" class="text-emerald-200 font-bold">載入中...</div>
+        <header class="flex items-center justify-between px-3 sm:px-6 py-2 border-b border-emerald-900/40 safe-area"
+            style="background: rgba(5,10,20,0.9);">
+            <h1 class="text-lg sm:text-xl font-bold glow" style="font-family:'Orbitron',monospace; color:#00ff88;">
+                Energy Empire</h1>
+            <div class="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-emerald-300">
+                <span>回合: <strong id="turn-num">1</strong></span>
+                <span>資金: $<strong id="player-cash">10000</strong>M</span>
+                <span id="api-status" title="API連線狀態"><span class="api-dot loading"></span></span>
             </div>
-            <div class="bg-blue-900/20 rounded p-1.5 border border-blue-800/30">
-              <div class="text-blue-400 text-xs mb-0.5">⚡ 台電備轉</div>
-              <div id="rt-power" class="text-blue-200 font-bold">載入中...</div>
-            </div>
-            <div class="bg-yellow-900/20 rounded p-1.5 border border-yellow-800/30">
-              <div class="text-yellow-500 text-xs mb-0.5">☀️ 台灣太陽能</div>
-              <div id="rt-solar" class="text-yellow-200 font-bold">載入中...</div>
-            </div>
-            <div class="bg-gray-900/20 rounded p-1.5 border border-gray-700/30">
-              <div class="text-gray-400 text-xs mb-0.5">💨 台灣AQI</div>
-              <div id="rt-aqi" class="text-gray-200 font-bold">載入中...</div>
-            </div>
-            <div class="bg-purple-900/20 rounded p-1.5 border border-purple-800/30">
-              <div class="text-purple-400 text-xs mb-0.5">🌍 全球碳排</div>
-              <div id="rt-carbon" class="text-purple-200 font-bold">載入中...</div>
-            </div>
-            <div class="bg-cyan-900/20 rounded p-1.5 border border-cyan-800/30">
-              <div class="text-cyan-400 text-xs mb-0.5">🇹🇼 台灣用電</div>
-              <div id="rt-twenergy" class="text-cyan-200 font-bold">載入中...</div>
-            </div>
-          </div>
-          <div id="api-sources" class="text-xs text-emerald-900/60 mt-1.5">資料來源：台電 / EIA / EPA / Ember / 世界銀行</div>
-        </div>
+        </header>
 
-        <!-- Stock Market -->
-        <div class="panel rounded-lg p-2 sm:p-4 slide-up" style="animation-delay:0.1s;">
-          <h2 class="text-emerald-400 font-bold mb-2 flex items-center gap-1 text-xs sm:text-sm"
-            style="font-family:'Orbitron',monospace;">
-            <i data-lucide="trending-up" style="width:14px;height:14px;"></i> 股票市場
-          </h2>
-          <div id="stock-market" class="space-y-1 text-xs"></div>
-        </div>
+        <div class="flex-1 flex flex-col overflow-hidden">
 
-        <!-- Portfolio (持倉) -->
-        <div class="panel rounded-lg p-2 sm:p-4 slide-up" style="animation-delay:0.15s;">
-          <h2 class="text-emerald-400 font-bold mb-2 flex items-center gap-1 text-xs sm:text-sm"
-            style="font-family:'Orbitron',monospace;">
-            <i data-lucide="briefcase" style="width:14px;height:14px;"></i> 我的持倉
-          </h2>
-          <div id="portfolio" class="text-xs text-emerald-200/70">尚未持有任何股票</div>
-        </div>
+            <div class="flex-1 relative flex items-center justify-center" style="min-height:0;">
+                <canvas id="globe" class="globe-canvas"></canvas>
 
-        <!-- Actions -->
-        <div class="panel rounded-lg p-2 sm:p-4 slide-up" style="animation-delay:0.2s;">
-          <h2 class="text-emerald-400 font-bold mb-2 flex items-center gap-1 text-xs sm:text-sm"
-            style="font-family:'Orbitron',monospace;">
-            <i data-lucide="swords" style="width:14px;height:14px;"></i> 操作
-          </h2>
-          <div class="grid grid-cols-2 gap-1 sm:gap-2 text-xs sm:text-sm">
-            <button onclick="invest('solar')"
-              class="bg-yellow-600/30 border border-yellow-500/50 text-yellow-300 rounded px-2 py-1.5 hover:bg-yellow-600/50 transition active:scale-95">☀️
-              太陽 -$500M</button>
-            <button onclick="invest('oil')"
-              class="bg-gray-600/30 border border-gray-500/50 text-gray-300 rounded px-2 py-1.5 hover:bg-gray-600/50 transition active:scale-95">🛢️
-              石油 -$500M</button>
-            <button onclick="invest('nuclear')"
-              class="bg-purple-600/30 border border-purple-500/50 text-purple-300 rounded px-2 py-1.5 hover:bg-purple-600/50 transition active:scale-95">⚛️
-              核能 -$500M</button>
-            <button onclick="invest('wind')"
-              class="bg-cyan-600/30 border border-cyan-500/50 text-cyan-300 rounded px-2 py-1.5 hover:bg-cyan-600/50 transition active:scale-95">💨
-              風能 -$500M</button>
-            <button onclick="openBuyModal()"
-              class="bg-emerald-600/30 border border-emerald-500/50 text-emerald-300 rounded px-2 py-1.5 hover:bg-emerald-600/50 transition active:scale-95">📈
-              買股票</button>
-            <button onclick="openSellModal()"
-              class="bg-orange-600/30 border border-orange-500/50 text-orange-300 rounded px-2 py-1.5 hover:bg-orange-600/50 transition active:scale-95">📉
-              賣股票</button>
-            <button onclick="nextTurn()"
-              class="bg-red-600/30 border border-red-500/50 text-red-300 rounded px-2 py-1.5 hover:bg-red-600/50 transition active:scale-95 col-span-2">⏭️
-              下一回合</button>
-          </div>
-        </div>
+                <div id="country-info"
+                    class="hidden absolute top-3 left-3 sm:top-4 sm:left-4 panel rounded-lg p-3 text-emerald-200 text-xs sm:text-sm slide-up"
+                    style="min-width:160px;max-width:200px;z-index:10;">
+                    <h3 id="ci-name" class="text-emerald-400 font-bold text-sm mb-2"></h3>
+                    <div id="ci-details" style="line-height:1.4;"></div>
+                </div>
+            </div>
 
-        <!-- Event Log -->
-        <div class="panel rounded-lg p-2 sm:p-4 slide-up" style="animation-delay:0.3s;">
-          <h2 class="text-emerald-400 font-bold mb-2 flex items-center gap-1 text-xs sm:text-sm"
-            style="font-family:'Orbitron',monospace;">
-            <i data-lucide="newspaper" style="width:14px;height:14px;"></i> 事件紀錄
-          </h2>
-          <div id="event-log" class="text-xs text-emerald-200/70 space-y-1 max-h-24 overflow-y-auto"></div>
-        </div>
+            <aside class="w-full overflow-y-auto p-2 sm:p-3 space-y-2 sm:space-y-3 border-t border-emerald-900/30"
+                style="background:rgba(5,10,20,0.95);max-height:50%;-webkit-overflow-scrolling:touch;">
 
-      </aside>
+                <div class="panel rounded-lg p-2 sm:p-4 slide-up">
+                    <h2 class="text-emerald-400 font-bold mb-2 flex items-center gap-1 text-xs sm:text-sm"
+                        style="font-family:'Orbitron',monospace;">
+                        <i data-lucide="zap" style="width:14px;height:14px;"></i> 能源市場
+                    </h2>
+                    <div id="energy-market" class="space-y-1 text-xs"></div>
+                </div>
+
+                <div class="panel rounded-lg p-2 sm:p-4 slide-up" style="animation-delay:0.05s;">
+                    <h2 class="text-emerald-400 font-bold mb-2 flex items-center gap-1 text-xs sm:text-sm"
+                        style="font-family:'Orbitron',monospace;">
+                        <i data-lucide="activity" style="width:14px;height:14px;"></i> 即時數據
+                    </h2>
+                    <div id="realtime-dashboard" class="grid grid-cols-2 gap-1 text-xs">
+                        <div class="bg-emerald-900/20 rounded p-1.5 border border-emerald-800/30">
+                            <div class="text-emerald-500 text-xs mb-0.5">🛢️ WTI油價</div>
+                            <div id="rt-oil" class="text-emerald-200 font-bold">載入中...</div>
+                        </div>
+                        <div class="bg-blue-900/20 rounded p-1.5 border border-blue-800/30">
+                            <div class="text-blue-400 text-xs mb-0.5">⚡ 台電備轉</div>
+                            <div id="rt-power" class="text-blue-200 font-bold">載入中...</div>
+                        </div>
+                        <div class="bg-yellow-900/20 rounded p-1.5 border border-yellow-800/30">
+                            <div class="text-yellow-500 text-xs mb-0.5">☀️ 台灣太陽能</div>
+                            <div id="rt-solar" class="text-yellow-200 font-bold">載入中...</div>
+                        </div>
+                        <div class="bg-gray-900/20 rounded p-1.5 border border-gray-700/30">
+                            <div class="text-gray-400 text-xs mb-0.5">💨 台灣AQI</div>
+                            <div id="rt-aqi" class="text-gray-200 font-bold">載入中...</div>
+                        </div>
+                        <div class="bg-purple-900/20 rounded p-1.5 border border-purple-800/30">
+                            <div class="text-purple-400 text-xs mb-0.5">🌍 全球碳排</div>
+                            <div id="rt-carbon" class="text-purple-200 font-bold">載入中...</div>
+                        </div>
+                        <div class="bg-cyan-900/20 rounded p-1.5 border border-cyan-800/30">
+                            <div class="text-cyan-400 text-xs mb-0.5">🇯🇵 日本用電</div>
+                            <div id="rt-twenergy" class="text-cyan-200 font-bold">載入中...</div>
+                        </div>
+                    </div>
+                    <div id="api-sources" class="text-xs text-emerald-900/60 mt-1.5">資料來源：台電 / EIA / EPA / Ember / 世界銀行
+                    </div>
+                </div>
+
+                <div class="panel rounded-lg p-2 sm:p-4 slide-up" style="animation-delay:0.1s;">
+                    <h2 class="text-emerald-400 font-bold mb-2 flex items-center gap-1 text-xs sm:text-sm"
+                        style="font-family:'Orbitron',monospace;">
+                        <i data-lucide="trending-up" style="width:14px;height:14px;"></i> 股票市場
+                    </h2>
+                    <div id="stock-market" class="space-y-1 text-xs"></div>
+                </div>
+
+                <div class="panel rounded-lg p-2 sm:p-4 slide-up" style="animation-delay:0.15s;">
+                    <h2 class="text-emerald-400 font-bold mb-2 flex items-center gap-1 text-xs sm:text-sm"
+                        style="font-family:'Orbitron',monospace;">
+                        <i data-lucide="briefcase" style="width:14px;height:14px;"></i> 我的持倉
+                    </h2>
+                    <div id="portfolio" class="text-xs text-emerald-200/70">尚未持有任何股票</div>
+                </div>
+
+                <div class="panel rounded-lg p-2 sm:p-4 slide-up" style="animation-delay:0.2s;">
+                    <h2 class="text-emerald-400 font-bold mb-2 flex items-center gap-1 text-xs sm:text-sm"
+                        style="font-family:'Orbitron',monospace;">
+                        <i data-lucide="swords" style="width:14px;height:14px;"></i> 操作
+                    </h2>
+                    <div class="grid grid-cols-2 gap-1 sm:gap-2 text-xs sm:text-sm">
+                        <button onclick="invest('solar')"
+                            class="bg-yellow-600/30 border border-yellow-500/50 text-yellow-300 rounded px-2 py-1.5 hover:bg-yellow-600/50 transition active:scale-95">☀️
+                            太陽 -$500M</button>
+                        <button onclick="invest('oil')"
+                            class="bg-gray-600/30 border border-gray-500/50 text-gray-300 rounded px-2 py-1.5 hover:bg-gray-600/50 transition active:scale-95">🛢️
+                            石油 -$500M</button>
+                        <button onclick="invest('nuclear')"
+                            class="bg-purple-600/30 border border-purple-500/50 text-purple-300 rounded px-2 py-1.5 hover:bg-purple-600/50 transition active:scale-95">⚛️
+                            核能 -$500M</button>
+                        <button onclick="invest('wind')"
+                            class="bg-cyan-600/30 border border-cyan-500/50 text-cyan-300 rounded px-2 py-1.5 hover:bg-cyan-600/50 transition active:scale-95">💨
+                            風能 -$500M</button>
+                        <button onclick="openBuyModal()"
+                            class="bg-emerald-600/30 border border-emerald-500/50 text-emerald-300 rounded px-2 py-1.5 hover:bg-emerald-600/50 transition active:scale-95">📈
+                            買股票</button>
+                        <button onclick="openSellModal()"
+                            class="bg-orange-600/30 border border-orange-500/50 text-orange-300 rounded px-2 py-1.5 hover:bg-orange-600/50 transition active:scale-95">📉
+                            賣股票</button>
+                        <button onclick="nextTurn()"
+                            class="bg-red-600/30 border border-red-500/50 text-red-300 rounded px-2 py-1.5 hover:bg-red-600/50 transition active:scale-95 col-span-2">⏭️
+                            下一回合</button>
+                    </div>
+                </div>
+
+                <div class="panel rounded-lg p-2 sm:p-4 slide-up" style="animation-delay:0.3s;">
+                    <h2 class="text-emerald-400 font-bold mb-2 flex items-center gap-1 text-xs sm:text-sm"
+                        style="font-family:'Orbitron',monospace;">
+                        <i data-lucide="newspaper" style="width:14px;height:14px;"></i> 事件紀錄
+                    </h2>
+                    <div id="event-log" class="text-xs text-emerald-200/70 space-y-1 max-h-24 overflow-y-auto"></div>
+                </div>
+
+            </aside>
+        </div>
     </div>
-  </div>
 
-  <!-- Buy Modal -->
-  <div id="buy-modal" class="modal-overlay hidden">
-    <div class="modal-box">
-      <h3 class="text-emerald-400 font-bold mb-3" style="font-family:'Orbitron',monospace;">📈 買入股票</h3>
-      <label>選擇股票</label>
-      <select id="buy-ticker"></select>
-      <label>數量（股）</label>
-      <input type="number" id="buy-qty" min="1" value="1" placeholder="輸入數量">
-      <div id="buy-cost" class="text-xs mt-2 text-emerald-300/70"></div>
-      <div class="flex gap-2 mt-4">
-        <button class="btn-green" onclick="confirmBuy()">確認買入</button>
-        <button class="btn-gray" onclick="closeModal('buy-modal')">取消</button>
-      </div>
+    <div id="buy-modal" class="modal-overlay hidden">
+        <div class="modal-box">
+            <h3 class="text-emerald-400 font-bold mb-3" style="font-family:'Orbitron',monospace;">📈 買入股票</h3>
+            <label>選擇股票</label>
+            <select id="buy-ticker" onchange="updateBuyCost()"></select>
+            <label>數量（股）</label>
+            <input type="number" id="buy-qty" min="1" value="1" oninput="updateBuyCost()" placeholder="輸入數量">
+            <div id="buy-cost" class="text-xs mt-2 text-emerald-300/70"></div>
+            <div class="flex gap-2 mt-4">
+                <button class="btn-green" onclick="confirmBuy()">確認買入</button>
+                <button class="btn-gray" onclick="closeModal('buy-modal')">取消</button>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <!-- Sell Modal -->
-  <div id="sell-modal" class="modal-overlay hidden">
-    <div class="modal-box">
-      <h3 class="text-emerald-400 font-bold mb-3" style="font-family:'Orbitron',monospace;">📉 賣出股票</h3>
-      <label>選擇持倉</label>
-      <select id="sell-ticker"></select>
-      <label>數量（股）</label>
-      <input type="number" id="sell-qty" min="1" value="1" placeholder="輸入數量">
-      <div id="sell-info" class="text-xs mt-2 text-emerald-300/70"></div>
-      <div class="flex gap-2 mt-4">
-        <button class="btn-red" onclick="confirmSell()">確認賣出</button>
-        <button class="btn-gray" onclick="closeModal('sell-modal')">取消</button>
-      </div>
+    <div id="sell-modal" class="modal-overlay hidden">
+        <div class="modal-box">
+            <h3 class="text-emerald-400 font-bold mb-3" style="font-family:'Orbitron',monospace;">📉 賣出股票</h3>
+            <label>選擇持倉</label>
+            <select id="sell-ticker" onchange="updateSellInfo()"></select>
+            <label>數量（股）</label>
+            <input type="number" id="sell-qty" min="1" value="1" oninput="updateSellInfo()" placeholder="輸入數量">
+            <div id="sell-info" class="text-xs mt-2 text-emerald-300/70"></div>
+            <div class="flex gap-2 mt-4">
+                <button class="btn-red" onclick="confirmSell()">確認賣出</button>
+                <button class="btn-gray" onclick="closeModal('sell-modal')">取消</button>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <script>
-    // ═══════════════════════════════════════════════
-    // ⚙️  設定區：上傳 GitHub 前把 key 換成 'YOUR_KEY'
-    // ═══════════════════════════════════════════════
-    const CONFIG = {
-      FINNHUB_KEY: 'd8erbipr01qub7kee6i0d8erbipr01qub7kee6ig'  // ← 把這裡換成你的 Finnhub API key
-    };
-    // ═══════════════════════════════════════════════
+    <script>
+        // ═══════════════════════════════════════════════
+        // ⚙️  設定區：上傳 GitHub 前把 key 換成 'YOUR_KEY'
+        // ═══════════════════════════════════════════════
+        const CONFIG = {
+            FINNHUB_KEY: 'd8erbipr01qub7kee6i0d8erbipr01qub7kee6ig'  // ← 把這裡換成你的 Finnhub API key
+        };
+        // ═══════════════════════════════════════════════
 
-    // ─── Game State ───────────────────────────────────────────────
-    const state = {
-      turn: 1,
-      cash: 10000,
-      energy: { solar: 15, oil: 35, coal: 25, nuclear: 15, wind: 10 },
-      stocks: [
-        { ticker: 'XOM', name: 'ExxonMobil', price: 105, type: 'oil', real: true },
-        { ticker: 'NEE', name: 'NextEra', price: 75, type: 'solar', real: true },
-        { ticker: 'ORSTED', name: 'Ørsted', price: 50, type: 'wind', real: false },
-        { ticker: 'CCJ', name: 'Cameco', price: 42, type: 'nuclear', real: true },
-        { ticker: '601857', name: '中國石油', price: 12, type: 'oil', real: false },
-        { ticker: '600688', name: '上海石化', price: 8.5, type: 'oil', real: false },
-        { ticker: '600905', name: '三峽能源', price: 28, type: 'wind', real: false },
-        { ticker: '688798', name: '寧德時代', price: 180, type: 'solar', real: false }
-      ],
-      // CRUD: 持倉紀錄 { ticker, name, qty, avgCost }
-      portfolio: [],
-      countries: [
-        { name: '台灣', lat: 23.5, lon: 121, economy: 100, solar: 15, coal: 30, nuclear: 20 },
-        { name: 'USA', lat: 38, lon: -97, economy: 500, solar: 25, oil: 40, gas: 35 },
-        { name: '德國', lat: 51, lon: 10, economy: 300, wind: 35, solar: 20, coal: 25 },
-        { name: '沙烏地', lat: 24, lon: 45, economy: 250, oil: 80, solar: 10 },
-        { name: '日本', lat: 36, lon: 138, economy: 350, nuclear: 20, solar: 15, coal: 30 },
-        { name: '中國', lat: 35, lon: 105, economy: 600, coal: 50, solar: 15, wind: 10 }
-      ],
-      randomEvents: [
-        { name: '中東衝突爆發', effect: 'oil', delta: +8 },
-        { name: '颱風侵襲', effect: 'solar', delta: -5 },
-        { name: '再生能源補助通過', effect: 'solar', delta: +5 },
-        { name: '核電廠事故', effect: 'nuclear', delta: -8 },
-        { name: '碳稅加重', effect: 'coal', delta: -6 },
-        { name: '風電技術突破', effect: 'wind', delta: +6 }
-      ],
-      log: [],
-      apiStatus: 'loading' // 'loading' | 'ok' | 'fail'
-    };
+        // ─── Game State ───────────────────────────────────────────────
+        const state = {
+            turn: 1,
+            cash: 10000,
+            energy: { solar: 15, oil: 35, coal: 25, nuclear: 15, wind: 10 },
+            stocks: [
+                { ticker: 'XOM', name: 'ExxonMobil', price: 105, type: 'oil', real: true },
+                { ticker: 'NEE', name: 'NextEra', price: 75, type: 'solar', real: true },
+                { ticker: 'ORSTED', name: 'Ørsted', price: 50, type: 'wind', real: false },
+                { ticker: 'CCJ', name: 'Cameco', price: 42, type: 'nuclear', real: true },
+                { ticker: '601857', name: '中國石油', price: 12, type: 'oil', real: false },
+                { ticker: '600688', name: '上海石化', price: 8.5, type: 'oil', real: false },
+                { ticker: '600905', name: '三峽能源', price: 28, type: 'wind', real: false },
+                { ticker: '688798', name: '寧德時代', price: 180, type: 'solar', real: false }
+            ],
+            portfolio: [],
+            countries: [
+                { name: '台灣', lat: 23.5, lon: 121, economy: 100, solar: 15, coal: 30, nuclear: 20 },
+                { name: 'USA', lat: 38, lon: -97, economy: 500, solar: 25, oil: 40, gas: 35 },
+                { name: '德國', lat: 51, lon: 10, economy: 300, wind: 35, solar: 20, coal: 25 },
+                { name: '沙烏地', lat: 24, lon: 45, economy: 250, oil: 80, solar: 10 },
+                { name: '日本', lat: 36, lon: 138, economy: 350, nuclear: 20, solar: 15, coal: 30 },
+                { name: '中國', lat: 35, lon: 105, economy: 600, coal: 50, solar: 15, wind: 10 }
+            ],
+            randomEvents: [
+                { name: '中東衝突爆發', effect: 'oil', delta: +8 },
+                { name: '颱風侵襲', effect: 'solar', delta: -5 },
+                { name: '再生能源補助通過', effect: 'solar', delta: +5 },
+                { name: '核電廠事故', effect: 'nuclear', delta: -8 },
+                { name: '碳稅加重', effect: 'coal', delta: -6 },
+                { name: '風電技術突破', effect: 'wind', delta: +6 }
+            ],
+            log: [],
+            apiStatus: 'loading'
+        };
 
-    // ─── API Fetch 工具函式 ───────────────────────────────────────
-    // 多個 CORS Proxy，依序嘗試
-    const PROXIES = [
-      url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-      url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-      url => `https://thingproxy.freeboard.io/fetch/${url}`
-    ];
+        // ─── API Fetch 工具函式 ───────────────────────────────────────
+        const PROXIES = [
+            url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+            url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+            url => `https://thingproxy.freeboard.io/fetch/${url}`
+        ];
 
-    async function fetchViaProxy(url, timeout = 8000) {
-      for (const makeProxy of PROXIES) {
-        const controller = new AbortController();
-        const id = setTimeout(() => controller.abort(), timeout);
-        try {
-          const res = await fetch(makeProxy(url), { signal: controller.signal });
-          clearTimeout(id);
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const text = await res.text();
-          if (text.includes('Host not in allowlist') || text.trim() === '') throw new Error('blocked');
-          return JSON.parse(text);
-        } catch (e) {
-          clearTimeout(id);
-          // 這個 proxy 失敗，試下一個
+        async function fetchViaProxy(url, timeout = 8000) {
+            for (const makeProxy of PROXIES) {
+                const controller = new AbortController();
+                const id = setTimeout(() => controller.abort(), timeout);
+                try {
+                    const res = await fetch(makeProxy(url), { signal: controller.signal });
+                    clearTimeout(id);
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    const text = await res.text();
+                    if (text.includes('Host not in allowlist') || text.trim() === '') throw new Error('blocked');
+                    return JSON.parse(text);
+                } catch (e) {
+                    clearTimeout(id);
+                }
+            }
+            throw new Error('所有 Proxy 均失敗');
         }
-      }
-      throw new Error('所有 Proxy 均失敗');
-    }
 
-    async function fetchDirect(url, timeout = 8000) {
-      const controller = new AbortController();
-      const id = setTimeout(() => controller.abort(), timeout);
-      try {
-        const res = await fetch(url, { signal: controller.signal });
-        clearTimeout(id);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return await res.json();
-      } catch (e) {
-        clearTimeout(id);
-        throw e;
-      }
-    }
-
-    function setDashboard(id, text, ok = true) {
-      const el = document.getElementById(id);
-      if (el) {
-        el.textContent = text;
-        el.style.opacity = ok ? '1' : '0.45';
-      }
-    }
-
-    // ① Open-Meteo 太陽輻射 + 風速（台灣台北，完全免費無需 key，原生支援 CORS）
-    async function fetchTaiwanPower() {
-      try {
-        // Open-Meteo：台灣當前太陽輻射(W/m²) & 風速(km/h)
-        const data = await fetchDirect(
-          'https://api.open-meteo.com/v1/forecast?latitude=25.04&longitude=121.53&current=shortwave_radiation,wind_speed_10m,temperature_2m&timezone=Asia%2FTaipei'
-        );
-        if (data?.current) {
-          const radiation = data.current.shortwave_radiation ?? 0;  // W/m²
-          const windSpeed = data.current.wind_speed_10m ?? 0;        // km/h
-          const temp = data.current.temperature_2m ?? 0;
-
-          // 轉換成遊戲用數字（模擬發電量）
-          const solarEst = Math.round(radiation * 0.15); // 粗估 MW（依輻射）
-          const windEst = Math.round(windSpeed * 12);   // 粗估 MW（依風速）
-
-          setDashboard('rt-solar', `☀️ ${radiation} W/m²（約${solarEst}MW）`);
-          setDashboard('rt-power', `🌡️ ${temp}°C 風${windSpeed}km/h`);
-
-          // 更新遊戲能源佔比
-          if (radiation > 300) state.energy.solar = Math.min(40, state.energy.solar + 1);
-          if (windSpeed > 20) state.energy.wind = Math.min(30, state.energy.wind + 1);
-
-          addLog(`✓ 台灣即時天氣：太陽輻射${radiation}W/m²，風速${windSpeed}km/h`);
-          return true;
+        async function fetchDirect(url, timeout = 8000) {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeout);
+            try {
+                const res = await fetch(url, { signal: controller.signal });
+                clearTimeout(id);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return await res.json();
+            } catch (e) {
+                clearTimeout(id);
+                throw e;
+            }
         }
-      } catch (e) {
-        setDashboard('rt-solar', '無法連線 --', false);
-        setDashboard('rt-power', '無法連線 --', false);
-        addLog('⚠ Open-Meteo API 暫時無法連線');
-      }
-      return false;
-    }
 
-    // ② 油價：使用匯率推算，但不覆蓋 Finnhub 已更新的真實股價
-    async function fetchOilPrice() {
-      // 方法一：用 exchangerate.host 免費匯率API（無需key，原生CORS）
-      try {
-        const data = await fetchDirect(
-          'https://open.er-api.com/v6/latest/USD'
-        );
-        if (data?.rates) {
-          const twd = data.rates.TWD || 32;
-          const baseOil = 78 + (twd - 30) * 1.2;
-          const oil = Math.max(55, Math.min(120, baseOil));
-          // 只更新儀表板油價顯示，不動 XOM 股價（由 Finnhub 負責）
-          setDashboard('rt-oil', `$${oil.toFixed(2)}/桶 (匯率推算)`);
-          addLog(`✓ 油價推算: $${oil.toFixed(1)}/桶（USD/TWD=${twd.toFixed(2)}）`);
-          return true;
+        function setDashboard(id, text, ok = true) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.textContent = text;
+                el.style.opacity = ok ? '1' : '0.45';
+            }
         }
-      } catch (e) {
-        // 方法一失敗，試方法二
-      }
 
-      // 方法二：CoinGecko 免費API（無需key，原生CORS）
-      try {
-        const data = await fetchDirect(
-          'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd'
-        );
-        if (data?.bitcoin?.usd) {
-          const btc = data.bitcoin.usd;
-          const oil = Math.max(55, Math.min(120, 70 + (btc / 100000) * 30));
-          // 同樣只更新儀表板，不動 XOM 股價
-          setDashboard('rt-oil', `$${oil.toFixed(2)}/桶 (市場推算)`);
-          addLog(`✓ 油價市場推算: $${oil.toFixed(1)}/桶`);
-          return true;
+        async function fetchTaiwanPower() {
+            try {
+                const data = await fetchDirect(
+                    'https://api.open-meteo.com/v1/forecast?latitude=25.04&longitude=121.53&current=shortwave_radiation,wind_speed_10m,temperature_2m&timezone=Asia%2FTaipei'
+                );
+                if (data?.current) {
+                    const radiation = data.current.shortwave_radiation ?? 0;
+                    const windSpeed = data.current.wind_speed_10m ?? 0;
+                    const temp = data.current.temperature_2m ?? 0;
+
+                    const solarEst = Math.round(radiation * 0.15);
+                    const windEst = Math.round(windSpeed * 12);
+
+                    setDashboard('rt-solar', `☀️ ${radiation} W/m²（約${solarEst}MW）`);
+                    setDashboard('rt-power', `🌡️ ${temp}°C 風${windSpeed}km/h`);
+
+                    if (radiation > 300) state.energy.solar = Math.min(40, state.energy.solar + 1);
+                    if (windSpeed > 20) state.energy.wind = Math.min(30, state.energy.wind + 1);
+
+                    addLog(`✓ 台灣即時天氣：太陽輻射${radiation}W/m²，風速${windSpeed}km/h`);
+                    return true;
+                }
+            } catch (e) {
+                setDashboard('rt-solar', '無法連線 --', false);
+                setDashboard('rt-power', '無法連線 --', false);
+                addLog('⚠ Open-Meteo API 暫時無法連線');
+            }
+            return false;
         }
-      } catch (e) {
-        // 兩個都失敗
-      }
 
-      setDashboard('rt-oil', '無法連線 --', false);
-      addLog('⚠ 油價API均失敗');
-      return false;
-    }
+        async function fetchOilPrice() {
+            try {
+                const data = await fetchDirect('https://open.er-api.com/v6/latest/USD');
+                if (data?.rates) {
+                    const twd = data.rates.TWD || 32;
+                    const baseOil = 78 + (twd - 30) * 1.2;
+                    const oil = Math.max(55, Math.min(120, baseOil));
+                    setDashboard('rt-oil', `$${oil.toFixed(2)}/桶 (匯率推算)`);
+                    addLog(`✓ 油價推算: $${oil.toFixed(1)}/桶（USD/TWD=${twd.toFixed(2)}）`);
+                    return true;
+                }
+            } catch (e) { }
 
-    // ③ Open-Meteo 空氣品質（PM2.5，台灣，完全免費原生CORS）
-    async function fetchAQI() {
-      try {
-        const data = await fetchDirect(
-          'https://air-quality-api.open-meteo.com/v1/air-quality?latitude=25.04&longitude=121.53&current=pm2_5,pm10,carbon_monoxide&timezone=Asia%2FTaipei'
-        );
-        if (data?.current) {
-          const pm25 = data.current.pm2_5 ?? 0;
-          const pm10 = data.current.pm10 ?? 0;
-          // 換算成 AQI 近似值
-          const aqi = Math.round(pm25 * 4.5);
-          const aqiLabel = aqi <= 50 ? '良好🟢'
-            : aqi <= 100 ? '普通🟡'
-              : aqi <= 150 ? '敏感不良🟠'
-                : '不良🔴';
-          setDashboard('rt-aqi', `PM2.5: ${pm25.toFixed(1)} μg/m³ ${aqiLabel}`);
+            try {
+                const data = await fetchDirect('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd');
+                if (data?.bitcoin?.usd) {
+                    const btc = data.bitcoin.usd;
+                    const oil = Math.max(55, Math.min(120, 70 + (btc / 100000) * 30));
+                    setDashboard('rt-oil', `$${oil.toFixed(2)}/桶 (市場推算)`);
+                    addLog(`✓ 油價市場推算: $${oil.toFixed(1)}/桶`);
+                    return true;
+                }
+            } catch (e) { }
 
-          // 遊戲連動：PM2.5 高 → 煤炭受懲罰
-          if (pm25 > 25 && state.energy.coal > 10) {
-            state.energy.coal = Math.max(5, state.energy.coal - 1);
-            addLog(`⚠ 空汙警示！PM2.5=${pm25.toFixed(1)}，煤炭佔比下調`);
-          }
-          addLog(`✓ 台灣PM2.5: ${pm25.toFixed(1)} μg/m³`);
-          return true;
+            setDashboard('rt-oil', '無法連線 --', false);
+            addLog('⚠ 油價API均失敗');
+            return false;
         }
-      } catch (e) {
-        setDashboard('rt-aqi', '無法連線 --', false);
-        addLog('⚠ 空氣品質API暫時無法連線');
-      }
-      return false;
-    }
 
-    // ④ 世界銀行：台灣用電 + 全球碳排（原生支援 CORS，不需 Proxy）
-    async function fetchWorldBankData() {
-      try {
-        const [twData, co2Data] = await Promise.all([
-          fetchDirect('https://api.worldbank.org/v2/country/TW/indicator/EG.USE.ELEC.KH.PC?format=json&mrv=1'),
-          fetchDirect('https://api.worldbank.org/v2/country/WLD/indicator/EN.ATM.CO2E.KT?format=json&mrv=1')
-        ]);
+        async function fetchAQI() {
+            try {
+                const data = await fetchDirect(
+                    'https://air-quality-api.open-meteo.com/v1/air-quality?latitude=25.04&longitude=121.53&current=pm2_5,pm10,carbon_monoxide&timezone=Asia%2FTaipei'
+                );
+                if (data?.current) {
+                    const pm25 = data.current.pm2_5 ?? 0;
+                    const pm10 = data.current.pm10 ?? 0;
+                    const aqi = Math.round(pm25 * 4.5);
+                    const aqiLabel = aqi <= 50 ? '良好🟢' : aqi <= 100 ? '普通🟡' : aqi <= 150 ? '敏感不良🟠' : '不良🔴';
+                    setDashboard('rt-aqi', `PM2.5: ${pm25.toFixed(1)} μg/m³ ${aqiLabel}`);
 
-        const twVal = twData?.[1]?.[0];
-        const co2Val = co2Data?.[1]?.[0];
-
-        if (twVal?.value) {
-          setDashboard('rt-twenergy', `${Math.round(twVal.value).toLocaleString()} kWh/人`);
+                    if (pm25 > 25 && state.energy.coal > 10) {
+                        state.energy.coal = Math.max(5, state.energy.coal - 1);
+                        addLog(`⚠ 空汙警示！PM2.5=${pm25.toFixed(1)}，煤炭佔比下調`);
+                    }
+                    addLog(`✓ 台灣PM2.5: ${pm25.toFixed(1)} μg/m³`);
+                    return true;
+                }
+            } catch (e) {
+                setDashboard('rt-aqi', '無法連線 --', false);
+                addLog('⚠ 空氣品質API暫時無法連線');
+            }
+            return false;
         }
-        if (co2Val?.value) {
-          const gt = (co2Val.value / 1e6).toFixed(1);
-          setDashboard('rt-carbon', `${gt} Gt CO₂`);
-          addLog(`✓ 世界銀行：全球碳排 ${gt} Gt，台灣用電 ${Math.round(twVal?.value || 0).toLocaleString()} kWh/人`);
+
+        // 錯誤 2 修正：將原本沒有數據的台灣（TW）改為日本（JP）
+        async function fetchWorldBankData() {
+            try {
+                const [jpData, co2Data] = await Promise.all([
+                    fetchDirect('https://api.worldbank.org/v2/country/JP/indicator/EG.USE.ELEC.KH.PC?format=json&mrv=1'),
+                    fetchDirect('https://api.worldbank.org/v2/country/WLD/indicator/EN.ATM.CO2E.KT?format=json&mrv=1')
+                ]);
+
+                const jpVal = jpData?.[1]?.[0];
+                const co2Val = co2Data?.[1]?.[0];
+
+                if (jpVal?.value) {
+                    setDashboard('rt-twenergy', `${Math.round(jpVal.value).toLocaleString()} kWh/人`);
+                }
+                if (co2Val?.value) {
+                    const gt = (co2Val.value / 1e6).toFixed(1);
+                    setDashboard('rt-carbon', `${gt} Gt CO₂`);
+                    addLog(`✓ 世界銀行：全球碳排 ${gt} Gt，日本用電 ${Math.round(jpVal?.value || 0).toLocaleString()} kWh/人`);
+                }
+                return true;
+            } catch (e) {
+                setDashboard('rt-twenergy', '無法連線 --', false);
+                setDashboard('rt-carbon', '無法連線 --', false);
+                addLog('⚠ 世界銀行API暫時無法連線');
+            }
+            return false;
         }
-        return true;
-      } catch (e) {
-        setDashboard('rt-twenergy', '無法連線 --', false);
-        setDashboard('rt-carbon', '無法連線 --', false);
-        addLog('⚠ 世界銀行API暫時無法連線');
-      }
-      return false;
-    }
 
-    // ⑤ Finnhub 真實美股股價
-    async function fetchRealStocks() {
-      if (!CONFIG.FINNHUB_KEY || CONFIG.FINNHUB_KEY === 'd8erbipr01qub7kee6i0d8erbipr01qub7kee6ig') {
-        addLog('⚠ 請設定 Finnhub API key');
-        return false;
-      }
-      const realStocks = state.stocks.filter(s => s.real);
-      let successCount = 0;
-      for (const stock of realStocks) {
-        try {
-          const data = await fetchDirect(
-            `https://finnhub.io/api/v1/quote?symbol=${stock.ticker}&token=${CONFIG.FINNHUB_KEY}`
-          );
-          // 修正：只要 c 存在且是數字就更新（包含負數情況）
-          if (data && typeof data.c === 'number' && data.c > 0) {
-            stock.price = parseFloat(data.c.toFixed(2));
-            stock.prevClose = data.pc || stock.price;
-            const change = data.pc ? ((data.c - data.pc) / data.pc * 100).toFixed(2) : '0.00';
-            addLog(`✓ ${stock.ticker}: $${stock.price} (${parseFloat(change) >= 0 ? '+' : ''}${change}%)`);
-            successCount++;
-          }
-          await new Promise(r => setTimeout(r, 300));
-        } catch (e) {
-          addLog(`⚠ ${stock.ticker} 股價取得失敗: ${e.message}`);
+        async function fetchRealStocks() {
+            if (!CONFIG.FINNHUB_KEY || CONFIG.FINNHUB_KEY === 'd8erbipr01qub7kee6i0d8erbipr01qub7kee6ig') {
+                addLog('⚠ 請設定 Finnhub API key');
+                return false;
+            }
+            const realStocks = state.stocks.filter(s => s.real);
+            let successCount = 0;
+            for (const stock of realStocks) {
+                try {
+                    const data = await fetchDirect(
+                        `https://finnhub.io/api/v1/quote?symbol=${stock.ticker}&token=${CONFIG.FINNHUB_KEY}`
+                    );
+                    if (data && typeof data.c === 'number' && data.c > 0) {
+                        stock.price = parseFloat(data.c.toFixed(2));
+                        stock.prevClose = data.pc || stock.price;
+                        const change = data.pc ? ((data.c - data.pc) / data.pc * 100).toFixed(2) : '0.00';
+                        addLog(`✓ ${stock.ticker}: $${stock.price} (${parseFloat(change) >= 0 ? '+' : ''}${change}%)`);
+                        successCount++;
+                    }
+                    await new Promise(r => setTimeout(r, 300));
+                } catch (e) {
+                    addLog(`⚠ ${stock.ticker} 股價取得失敗: ${e.message}`);
+                }
+            }
+            render();
+            if (successCount > 0) {
+                addLog(`✓ 真實股價已更新 ${successCount}/${realStocks.length} 支`);
+                return true;
+            }
+            return false;
         }
-      }
-      // 無論成功幾支都強制更新畫面
-      render();
-      if (successCount > 0) {
-        addLog(`✓ 真實股價已更新 ${successCount}/${realStocks.length} 支`);
-        return true;
-      }
-      return false;
-    }
-    async function initAPIs() {
-      updateApiDot('loading');
-      // 先跑其他 API（不會動到股價）
-      const results = await Promise.allSettled([
-        fetchTaiwanPower(),
-        fetchOilPrice(),
-        fetchAQI(),
-        fetchWorldBankData()
-      ]);
-      // Finnhub 最後跑，確保真實股價不被覆蓋
-      await fetchRealStocks();
 
-      const anyOk = results.some(r => r.value === true);
-      state.apiStatus = anyOk ? 'ok' : 'fail';
-      updateApiDot(state.apiStatus);
-      render();
+        // 錯誤 3 修正：進入 initAPIs 的第一秒立刻 render() 畫面，防止因為 API 延遲導致畫面一片白
+        async function initAPIs() {
+            updateApiDot('loading');
+            render(); // 👈 搶先渲染畫面初始值
 
-      // 定期更新
-      setInterval(() => {
-        fetchTaiwanPower();
-        fetchOilPrice();
-        fetchAQI();
-        render();
-      }, 60000);
-      setInterval(() => { fetchWorldBankData(); }, 600000);
-      // 股價每5分鐘更新（Finnhub 免費版限速）
-      setInterval(() => { fetchRealStocks(); }, 300000);
-    }
+            const results = await Promise.allSettled([
+                fetchTaiwanPower(),
+                fetchOilPrice(),
+                fetchAQI(),
+                fetchWorldBankData()
+            ]);
 
-    function updateApiDot(status) {
-      const dot = document.querySelector('#api-status .api-dot');
-      if (!dot) return;
-      dot.className = 'api-dot ' + status;
-      document.getElementById('api-status').title =
-        status === 'ok' ? 'API 連線正常' :
-          status === 'fail' ? 'API 連線失敗，使用模擬數據' : 'API 連線中...';
-    }
+            await fetchRealStocks();
 
-    // ─── CRUD：持倉管理 ───────────────────────────────────────────
+            const anyOk = results.some(r => r.value === true);
+            state.apiStatus = anyOk ? 'ok' : 'fail';
+            updateApiDot(state.apiStatus);
+            render();
 
-    // CREATE：買入
-    function openBuyModal() {
-      const sel = document.getElementById('buy-ticker');
-      sel.innerHTML = state.stocks.map(s =>
-        `<option value="${s.ticker}">${s.ticker} - ${s.name} ($${s.price.toFixed(1)})</option>`
-      ).join('');
-      document.getElementById('buy-qty').value = 1;
-      updateBuyCost();
-      document.getElementById('buy-modal').classList.remove('hidden');
-    }
+            setInterval(() => {
+                fetchTaiwanPower();
+                fetchOilPrice();
+                fetchAQI();
+                render();
+            }, 60000);
+            setInterval(() => { fetchWorldBankData(); }, 600000);
+            setInterval(() => { fetchRealStocks(); }, 300000);
+        }
 
-    function updateBuyCost() {
-      const ticker = document.getElementById('buy-ticker').value;
-      const qty = parseInt(document.getElementById('buy-qty').value) || 0;
-      const stock = state.stocks.find(s => s.ticker === ticker);
-      if (stock) {
-        const cost = stock.price * qty;
-        document.getElementById('buy-cost').textContent =
-          `預計花費：$${cost.toFixed(1)}M　(持有資金：$${state.cash}M)`;
-      }
-    }
-    document.getElementById('buy-ticker').addEventListener('change', updateBuyCost);
-    document.getElementById('buy-qty').addEventListener('input', updateBuyCost);
+        function updateApiDot(status) {
+            const dot = document.querySelector('#api-status .api-dot');
+            if (!dot) return;
+            dot.className = 'api-dot ' + status;
+            document.getElementById('api-status').title =
+                status === 'ok' ? 'API 連線正常' : status === 'fail' ? 'API 連線失敗，使用模擬數據' : 'API 連線中...';
+        }
 
-    function confirmBuy() {
-      const ticker = document.getElementById('buy-ticker').value;
-      const qty = parseInt(document.getElementById('buy-qty').value) || 0;
-      if (qty <= 0) return alert('請輸入有效數量');
-      const stock = state.stocks.find(s => s.ticker === ticker);
-      const cost = stock.price * qty;
-      if (cost > state.cash) return alert('資金不足！');
+        // ─── CRUD：持倉管理 ───────────────────────────────────────────
+        function openBuyModal() {
+            const sel = document.getElementById('buy-ticker');
+            sel.innerHTML = state.stocks.map(s =>
+                `<option value="${s.ticker}">${s.ticker} - ${s.name} ($${s.price.toFixed(1)})</option>`
+            ).join('');
+            document.getElementById('buy-qty').value = 1;
+            updateBuyCost();
+            document.getElementById('buy-modal').classList.remove('hidden');
+        }
 
-      state.cash = Math.round(state.cash - cost);
-      // 找既有持倉或新增
-      let holding = state.portfolio.find(p => p.ticker === ticker);
-      if (holding) {
-        // UPDATE avgCost
-        const totalCost = holding.avgCost * holding.qty + stock.price * qty;
-        holding.qty += qty;
-        holding.avgCost = totalCost / holding.qty;
-      } else {
-        // CREATE
-        state.portfolio.push({ ticker, name: stock.name, qty, avgCost: stock.price });
-      }
-      addLog(`買入 ${ticker} x${qty} @$${stock.price.toFixed(1)} (-$${cost.toFixed(1)}M)`);
-      closeModal('buy-modal');
-      render();
-    }
+        function updateBuyCost() {
+            const ticker = document.getElementById('buy-ticker').value;
+            const qty = parseInt(document.getElementById('buy-qty').value) || 0;
+            const stock = state.stocks.find(s => s.ticker === ticker);
+            if (stock) {
+                const cost = stock.price * qty;
+                document.getElementById('buy-cost').textContent = `預計花費：$${cost.toFixed(1)}M　(持有資金：$${state.cash}M)`;
+            }
+        }
 
-    // READ：顯示持倉（renderPortfolio 中處理）
+        function confirmBuy() {
+            const ticker = document.getElementById('buy-ticker').value;
+            const qty = parseInt(document.getElementById('buy-qty').value) || 0;
+            if (qty <= 0) return alert('請輸入有效數量');
+            const stock = state.stocks.find(s => s.ticker === ticker);
+            const cost = stock.price * qty;
+            if (cost > state.cash) return alert('資金不足！');
 
-    // UPDATE + DELETE：賣出
-    function openSellModal() {
-      if (state.portfolio.length === 0) return alert('你目前沒有持倉！');
-      const sel = document.getElementById('sell-ticker');
-      sel.innerHTML = state.portfolio.map(p => {
-        const stock = state.stocks.find(s => s.ticker === p.ticker);
-        const currentPrice = stock ? stock.price : p.avgCost;
-        const pnl = ((currentPrice - p.avgCost) / p.avgCost * 100).toFixed(1);
-        return `<option value="${p.ticker}">${p.ticker} x${p.qty} (${pnl >= 0 ? '+' : ''}${pnl}%)</option>`;
-      }).join('');
-      document.getElementById('sell-qty').value = 1;
-      updateSellInfo();
-      document.getElementById('sell-modal').classList.remove('hidden');
-    }
+            state.cash = Math.round(state.cash - cost);
+            let holding = state.portfolio.find(p => p.ticker === ticker);
+            if (holding) {
+                const totalCost = holding.avgCost * holding.qty + stock.price * qty;
+                holding.qty += qty;
+                holding.avgCost = totalCost / holding.qty;
+            } else {
+                state.portfolio.push({ ticker, name: stock.name, qty, avgCost: stock.price });
+            }
+            addLog(`買入 ${ticker} x${qty} @$${stock.price.toFixed(1)} (-$${cost.toFixed(1)}M)`);
+            closeModal('buy-modal');
+            render();
+        }
 
-    function updateSellInfo() {
-      const ticker = document.getElementById('sell-ticker').value;
-      const qty = parseInt(document.getElementById('sell-qty').value) || 0;
-      const holding = state.portfolio.find(p => p.ticker === ticker);
-      const stock = state.stocks.find(s => s.ticker === ticker);
-      if (holding && stock) {
-        const revenue = stock.price * qty;
-        const pnl = (stock.price - holding.avgCost) * qty;
-        document.getElementById('sell-info').textContent =
-          `持有：${holding.qty}股　預計收回：$${revenue.toFixed(1)}M　損益：${pnl >= 0 ? '+' : ''}$${pnl.toFixed(1)}M`;
-      }
-    }
-    document.getElementById('sell-ticker').addEventListener('change', updateSellInfo);
-    document.getElementById('sell-qty').addEventListener('input', updateSellInfo);
+        function openSellModal() {
+            if (state.portfolio.length === 0) return alert('你目前沒有持倉！');
+            const sel = document.getElementById('sell-ticker');
+            sel.innerHTML = state.portfolio.map(p => {
+                const stock = state.stocks.find(s => s.ticker === p.ticker);
+                const currentPrice = stock ? stock.price : p.avgCost;
+                const pnl = ((currentPrice - p.avgCost) / p.avgCost * 100).toFixed(1);
+                return `<option value="${p.ticker}">${p.ticker} x${p.qty} (${pnl >= 0 ? '+' : ''}${pnl}%)</option>`;
+            }).join('');
+            document.getElementById('sell-qty').value = 1;
+            updateSellInfo();
+            document.getElementById('sell-modal').classList.remove('hidden');
+        }
 
-    function confirmSell() {
-      const ticker = document.getElementById('sell-ticker').value;
-      const qty = parseInt(document.getElementById('sell-qty').value) || 0;
-      if (qty <= 0) return alert('請輸入有效數量');
-      const holding = state.portfolio.find(p => p.ticker === ticker);
-      if (!holding) return alert('找不到持倉');
-      if (qty > holding.qty) return alert(`持有數量不足（僅有 ${holding.qty} 股）`);
+        function updateSellInfo() {
+            const ticker = document.getElementById('sell-ticker').value;
+            const qty = parseInt(document.getElementById('sell-qty').value) || 0;
+            const holding = state.portfolio.find(p => p.ticker === ticker);
+            const stock = state.stocks.find(s => s.ticker === ticker);
+            if (holding && stock) {
+                const revenue = stock.price * qty;
+                const pnl = (stock.price - holding.avgCost) * qty;
+                document.getElementById('sell-info').textContent = `持有：${holding.qty}股　預計收回：$${revenue.toFixed(1)}M　損益：${pnl >= 0 ? '+' : ''}$${pnl.toFixed(1)}M`;
+            }
+        }
 
-      const stock = state.stocks.find(s => s.ticker === ticker);
-      const revenue = stock.price * qty;
-      const pnl = (stock.price - holding.avgCost) * qty;
-      state.cash = Math.round(state.cash + revenue);
+        function confirmSell() {
+            const ticker = document.getElementById('sell-ticker').value;
+            const qty = parseInt(document.getElementById('sell-qty').value) || 0;
+            if (qty <= 0) return alert('請輸入有效數量');
+            const holding = state.portfolio.find(p => p.ticker === ticker);
+            if (!holding) return alert('找不到持倉');
+            if (qty > holding.qty) return alert(`持有數量不足（僅有 ${holding.qty} 股）`);
 
-      if (qty === holding.qty) {
-        // DELETE：全部賣出，移除持倉
-        state.portfolio = state.portfolio.filter(p => p.ticker !== ticker);
-      } else {
-        // UPDATE：部分賣出
-        holding.qty -= qty;
-      }
-      addLog(`賣出 ${ticker} x${qty} @$${stock.price.toFixed(1)} (+$${revenue.toFixed(1)}M, 損益:${pnl >= 0 ? '+' : ''}$${pnl.toFixed(1)}M)`);
-      closeModal('sell-modal');
-      render();
-    }
+            const stock = state.stocks.find(s => s.ticker === ticker);
+            const revenue = stock.price * qty;
+            const pnl = (stock.price - holding.avgCost) * qty;
+            state.cash = Math.round(state.cash + revenue);
 
-    function closeModal(id) {
-      document.getElementById(id).classList.add('hidden');
-    }
+            if (qty === holding.qty) {
+                state.portfolio = state.portfolio.filter(p => p.ticker !== ticker);
+            } else {
+                holding.qty -= qty;
+            }
+            addLog(`賣出 ${ticker} x${qty} @$${stock.price.toFixed(1)} (+$${revenue.toFixed(1)}M, 損益:${pnl >= 0 ? '+' : ''}$${pnl.toFixed(1)}M)`);
+            closeModal('sell-modal');
+            render();
+        }
 
-    // ─── Render ──────────────────────────────────────────────────
-    function renderMarket() {
-      const colors = { solar: 'yellow', oil: 'gray', coal: 'orange', nuclear: 'purple', wind: 'cyan' };
-      const icons = { solar: '☀️', oil: '🛢️', coal: '⚫', nuclear: '⚛️', wind: '💨' };
-      document.getElementById('energy-market').innerHTML =
-        Object.entries(state.energy).map(([k, v]) =>
-          `<div class="flex justify-between items-center gap-1">
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        // ─── Render ──────────────────────────────────────────────────
+        function renderMarket() {
+            const colors = { solar: 'yellow', oil: 'gray', coal: 'orange', nuclear: 'purple', wind: 'cyan' };
+            const icons = { solar: '☀️', oil: '🛢️', coal: '⚫', nuclear: '⚛️', wind: '💨' };
+            document.getElementById('energy-market').innerHTML =
+                Object.entries(state.energy).map(([k, v]) =>
+                    `<div class="flex justify-between items-center gap-1">
         <span class="text-${colors[k]}-300 flex-shrink-0">${icons[k]} ${k}</span>
         <div class="h-1.5 rounded bg-gray-700 overflow-hidden flex-1">
           <div class="h-full bg-${colors[k]}-500 rounded" style="width:${v}%"></div>
         </div>
         <span class="text-${colors[k]}-200 w-8 text-right">${v}%</span>
       </div>`
-        ).join('');
-    }
+                ).join('');
+        }
 
-    function renderStocks() {
-      document.getElementById('stock-market').innerHTML =
-        state.stocks.map(s => {
-          const holding = state.portfolio.find(p => p.ticker === s.ticker);
-          const pnl = holding ? ((s.price - holding.avgCost) / holding.avgCost * 100).toFixed(1) : null;
-          return `<div class="flex justify-between items-center text-emerald-200 gap-1">
+        function renderStocks() {
+            document.getElementById('stock-market').innerHTML =
+                state.stocks.map(s => {
+                    const holding = state.portfolio.find(p => p.ticker === s.ticker);
+                    const pnl = holding ? ((s.price - holding.avgCost) / holding.avgCost * 100).toFixed(1) : null;
+                    return `<div class="flex justify-between items-center text-emerald-200 gap-1">
         <span class="font-mono flex-shrink-0 text-xs">${s.ticker}</span>
         <span class="text-emerald-400/60 text-xs flex-1 truncate">${s.name}</span>
         <span class="font-bold text-xs flex-shrink-0">$${s.price.toFixed(1)}</span>
         ${pnl !== null ? `<span class="text-xs ${parseFloat(pnl) >= 0 ? 'text-emerald-400' : 'text-red-400'}">${pnl >= 0 ? '+' : ''}${pnl}%</span>` : ''}
       </div>`;
-        }).join('');
-    }
+                }).join('');
+        }
 
-    function renderPortfolio() {
-      const el = document.getElementById('portfolio');
-      if (state.portfolio.length === 0) {
-        el.innerHTML = '<div class="text-emerald-200/40">尚未持有任何股票</div>';
-        return;
-      }
-      let totalPnl = 0;
-      el.innerHTML = state.portfolio.map(p => {
-        const stock = state.stocks.find(s => s.ticker === p.ticker);
-        const cur = stock ? stock.price : p.avgCost;
-        const pnl = (cur - p.avgCost) * p.qty;
-        totalPnl += pnl;
-        const pct = ((cur - p.avgCost) / p.avgCost * 100).toFixed(1);
-        return `<div class="portfolio-row">
+        function renderPortfolio() {
+            const el = document.getElementById('portfolio');
+            if (state.portfolio.length === 0) {
+                el.innerHTML = '<div class="text-emerald-200/40">尚未持有任何股票</div>';
+                return;
+            }
+            let totalPnl = 0;
+            el.innerHTML = state.portfolio.map(p => {
+                const stock = state.stocks.find(s => s.ticker === p.ticker);
+                const cur = stock ? stock.price : p.avgCost;
+                const pnl = (cur - p.avgCost) * p.qty;
+                totalPnl += pnl;
+                const pct = ((cur - p.avgCost) / p.avgCost * 100).toFixed(1);
+                return `<div class="portfolio-row">
       <span class="font-mono text-emerald-300">${p.ticker}</span>
       <span class="text-emerald-200/60">x${p.qty}</span>
       <span class="text-emerald-200/60">成本$${p.avgCost.toFixed(1)}</span>
       <span class="${pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}">${pnl >= 0 ? '+' : ''}$${pnl.toFixed(1)}M (${pct}%)</span>
     </div>`;
-      }).join('') +
-        `<div class="portfolio-row mt-1 border-t border-emerald-500/20 pt-1">
+            }).join('') +
+                `<div class="portfolio-row mt-1 border-t border-emerald-500/20 pt-1">
     <span class="text-emerald-300 font-bold">總損益</span>
     <span class="${totalPnl >= 0 ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}">${totalPnl >= 0 ? '+' : ''}$${totalPnl.toFixed(1)}M</span>
   </div>`;
-    }
-
-    function renderLog() {
-      document.getElementById('event-log').innerHTML =
-        state.log.slice(-8).reverse().map(e => `<div>⚡ ${e}</div>`).join('');
-    }
-
-    function updateHUD() {
-      document.getElementById('turn-num').textContent = state.turn;
-      document.getElementById('player-cash').textContent = state.cash.toLocaleString();
-    }
-
-    function addLog(msg) {
-      state.log.push(`[回合${state.turn}] ${msg}`);
-    }
-
-    function render() {
-      renderMarket();
-      renderStocks();
-      renderPortfolio();
-      renderLog();
-      updateHUD();
-    }
-
-    // ─── Game Actions ─────────────────────────────────────────────
-    function invest(type) {
-      if (state.cash < 500) { alert('資金不足！至少需要 $500M'); return; }
-      state.cash -= 500;
-      state.energy[type] = Math.min(60, (state.energy[type] || 0) + 3);
-      // 重新正規化，保持總和 100
-      const total = Object.values(state.energy).reduce((a, b) => a + b, 0);
-      Object.keys(state.energy).forEach(k => state.energy[k] = Math.max(1, Math.round(state.energy[k] / total * 100)));
-      addLog(`投資 ${type} 能源 (-$500M，佔比+3%)`);
-      render();
-    }
-
-    function nextTurn() {
-      state.turn++;
-      // 收入：根據再生能源佔比浮動
-      const renewableRatio = (state.energy.solar + state.energy.wind) / 100;
-      const income = Math.round(120 + renewableRatio * 80 + Math.random() * 80);
-      state.cash += income;
-      addLog(`回合收入 +$${income}M`);
-
-      // 股價隨機波動
-      state.stocks.forEach(s => {
-        s.price = Math.max(1, s.price * (0.93 + Math.random() * 0.16));
-      });
-
-      // 隨機事件（40% 機率）
-      if (Math.random() > 0.6) {
-        const ev = state.randomEvents[Math.floor(Math.random() * state.randomEvents.length)];
-        if (state.energy[ev.effect] !== undefined) {
-          state.energy[ev.effect] = Math.max(1, Math.min(70, state.energy[ev.effect] + ev.delta));
         }
-        addLog(`[事件] ${ev.name}`);
-      }
 
-      render();
-    }
-
-    // ─── 3D Globe ─────────────────────────────────────────────────
-    const canvas = document.getElementById('globe');
-    const ctx = canvas.getContext('2d', { alpha: true });
-
-    function resizeCanvas() {
-      const parent = canvas.parentElement;
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = parent.clientWidth * dpr;
-      canvas.height = parent.clientHeight * dpr;
-      ctx.scale(dpr, dpr);
-    }
-
-    let rotX = 0.3, rotY = 0, dragging = false, lastX = 0, lastY = 0, autoRotate = true;
-
-    canvas.addEventListener('mousedown', e => { dragging = true; autoRotate = false; lastX = e.clientX; lastY = e.clientY; });
-    canvas.addEventListener('mousemove', e => {
-      if (!dragging) return;
-      rotY += (e.clientX - lastX) * 0.005;
-      rotX = Math.max(-1.5, Math.min(1.5, rotX + (e.clientY - lastY) * 0.005));
-      lastX = e.clientX; lastY = e.clientY;
-    });
-    canvas.addEventListener('mouseup', () => { dragging = false; setTimeout(() => autoRotate = true, 3000); });
-    canvas.addEventListener('mouseleave', () => { dragging = false; });
-    canvas.addEventListener('touchstart', e => {
-      if (e.touches.length !== 1) return;
-      dragging = true; autoRotate = false;
-      lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
-    }, { passive: true });
-    canvas.addEventListener('touchmove', e => {
-      if (!dragging || e.touches.length !== 1) return;
-      rotY += (e.touches[0].clientX - lastX) * 0.008;
-      rotX = Math.max(-1.5, Math.min(1.5, rotX + (e.touches[0].clientY - lastY) * 0.008));
-      lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
-    }, { passive: true });
-    canvas.addEventListener('touchend', () => { dragging = false; setTimeout(() => autoRotate = true, 3000); }, { passive: true });
-
-    function project(lat, lon) {
-      const phi = (90 - lat) * Math.PI / 180;
-      const theta = (lon + 180) * Math.PI / 180;
-      const R = 200;
-      let x = R * Math.sin(phi) * Math.cos(theta);
-      let y = R * Math.cos(phi);
-      let z = R * Math.sin(phi) * Math.sin(theta);
-      let x2 = x * Math.cos(rotY) - z * Math.sin(rotY);
-      let z2 = x * Math.sin(rotY) + z * Math.cos(rotY);
-      let y2 = y * Math.cos(rotX) - z2 * Math.sin(rotX);
-      let z3 = y * Math.sin(rotX) + z2 * Math.cos(rotX);
-      return { x: x2, y: y2, z: z3 };
-    }
-
-    const continents = [
-      [[70, -170], [72, -130], [65, -90], [50, -60], [30, -80], [25, -100], [30, -120], [50, -130], [60, -150], [70, -170]],
-      [[10, -75], [5, -35], [-10, -35], [-35, -55], [-55, -70], [-40, -65], [-20, -40], [0, -50], [10, -75]],
-      [[35, -10], [40, 0], [45, 10], [50, 5], [55, 10], [60, 25], [70, 30], [65, 50], [55, 40], [45, 30], [40, 25], [35, 25], [35, -10]],
-      [[35, -10], [35, 35], [20, 40], [10, 45], [0, 40], [-15, 40], [-35, 20], [-35, 18], [-5, 10], [5, -5], [15, -15], [35, -10]],
-      [[65, 50], [70, 140], [60, 160], [50, 140], [35, 130], [20, 110], [10, 105], [5, 100], [10, 80], [25, 65], [35, 50], [45, 50], [55, 70], [65, 50]],
-      [[-15, 130], [-10, 150], [-25, 153], [-35, 150], [-38, 145], [-35, 115], [-20, 115], [-15, 130]]
-    ];
-
-    function drawGlobe() {
-      const W = canvas.width / (window.devicePixelRatio || 1);
-      const H = canvas.height / (window.devicePixelRatio || 1);
-      if (!W || !H) { requestAnimationFrame(drawGlobe); return; }
-      const cx = W / 2, cy = H / 2;
-
-      ctx.clearRect(0, 0, W, H);
-
-      // Glow backdrop
-      const grd = ctx.createRadialGradient(cx, cy, 180, cx, cy, 260);
-      grd.addColorStop(0, 'rgba(0,255,136,0.05)');
-      grd.addColorStop(1, 'transparent');
-      ctx.fillStyle = grd;
-      ctx.fillRect(0, 0, W, H);
-
-      // Ocean
-      ctx.beginPath();
-      ctx.arc(cx, cy, 200, 0, Math.PI * 2);
-      ctx.fillStyle = '#0a2540';
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(0,255,136,0.3)';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-
-      // Grid
-      ctx.strokeStyle = 'rgba(0,255,136,0.08)';
-      ctx.lineWidth = 0.5;
-      for (let lat = -60; lat <= 60; lat += 30) {
-        ctx.beginPath();
-        for (let lon = 0; lon <= 360; lon += 5) {
-          const p = project(lat, lon - 180);
-          if (p.z > 0) ctx.lineTo(cx + p.x, cy - p.y);
-          else ctx.moveTo(cx + p.x, cy - p.y);
+        function renderLog() {
+            document.getElementById('event-log').innerHTML =
+                state.log.slice(-8).reverse().map(e => `<div>⚡ ${e}</div>`).join('');
         }
-        ctx.stroke();
-      }
-      for (let lon = -180; lon < 180; lon += 30) {
-        ctx.beginPath();
-        for (let lat = -90; lat <= 90; lat += 5) {
-          const p = project(lat, lon);
-          if (p.z > 0) ctx.lineTo(cx + p.x, cy - p.y);
-          else ctx.moveTo(cx + p.x, cy - p.y);
-        }
-        ctx.stroke();
-      }
 
-      // Continents
-      ctx.strokeStyle = 'rgba(0,255,136,0.6)';
-      ctx.fillStyle = 'rgba(0,255,136,0.12)';
-      ctx.lineWidth = 1.2;
-      continents.forEach(cont => {
-        ctx.beginPath();
-        let started = false;
-        cont.forEach(([lat, lon]) => {
-          const p = project(lat, lon);
-          if (p.z > 0) {
-            if (!started) { ctx.moveTo(cx + p.x, cy - p.y); started = true; }
-            else ctx.lineTo(cx + p.x, cy - p.y);
-          } else { started = false; }
+        function updateHUD() {
+            document.getElementById('turn-num').textContent = state.turn;
+            document.getElementById('player-cash').textContent = state.cash.toLocaleString();
+        }
+
+        function addLog(msg) {
+            state.log.push(`[回合${state.turn}] ${msg}`);
+        }
+
+        function render() {
+            renderMarket();
+            renderStocks();
+            renderPortfolio();
+            renderLog();
+            updateHUD();
+        }
+
+        // ─── Game Actions ─────────────────────────────────────────────
+        function invest(type) {
+            if (state.cash < 500) { alert('資金不足！至少需要 $500M'); return; }
+            state.cash -= 500;
+            state.energy[type] = Math.min(60, (state.energy[type] || 0) + 3);
+            const total = Object.values(state.energy).reduce((a, b) => a + b, 0);
+            Object.keys(state.energy).forEach(k => state.energy[k] = Math.max(1, Math.round(state.energy[k] / total * 100)));
+            addLog(`投資 ${type} 能源 (-$500M，佔比+3%)`);
+            render();
+        }
+
+        function nextTurn() {
+            state.turn++;
+            const renewableRatio = (state.energy.solar + state.energy.wind) / 100;
+            const income = Math.round(120 + renewableRatio * 80 + Math.random() * 80);
+            state.cash += income;
+            addLog(`回合收入 +$${income}M`);
+
+            state.stocks.forEach(s => {
+                s.price = Math.max(1, s.price * (0.93 + Math.random() * 0.16));
+            });
+
+            if (Math.random() > 0.6) {
+                const ev = state.randomEvents[Math.floor(Math.random() * state.randomEvents.length)];
+                if (state.energy[ev.effect] !== undefined) {
+                    state.energy[ev.effect] = Math.max(1, Math.min(70, state.energy[ev.effect] + ev.delta));
+                }
+                addLog(`[事件] ${ev.name}`);
+            }
+
+            render();
+        }
+
+        // ─── 3D Globe ─────────────────────────────────────────────────
+        const canvas = document.getElementById('globe');
+        const ctx = canvas.getContext('2d', { alpha: true });
+
+        function resizeCanvas() {
+            const parent = canvas.parentElement;
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = parent.clientWidth * dpr;
+            canvas.height = parent.clientHeight * dpr;
+            ctx.scale(dpr, dpr);
+        }
+
+        let rotX = 0.3, rotY = 0, dragging = false, lastX = 0, lastY = 0, autoRotate = true;
+
+        canvas.addEventListener('mousedown', e => { dragging = true; autoRotate = false; lastX = e.clientX; lastY = e.clientY; });
+        canvas.addEventListener('mousemove', e => {
+            if (!dragging) return;
+            rotY += (e.clientX - lastX) * 0.005;
+            rotX = Math.max(-1.5, Math.min(1.5, rotX + (e.clientY - lastY) * 0.005));
+            lastX = e.clientX; lastY = e.clientY;
         });
-        ctx.fill();
-        ctx.stroke();
-      });
+        canvas.addEventListener('mouseup', () => { dragging = false; setTimeout(() => autoRotate = true, 3000); });
+        canvas.addEventListener('mouseleave', () => { dragging = false; });
+        canvas.addEventListener('touchstart', e => {
+            if (e.touches.length !== 1) return;
+            dragging = true; autoRotate = false;
+            lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
+        }, { passive: true });
+        canvas.addEventListener('touchmove', e => {
+            if (!dragging || e.touches.length !== 1) return;
+            rotY += (e.touches[0].clientX - lastX) * 0.008;
+            rotX = Math.max(-1.5, Math.min(1.5, rotX + (e.touches[0].clientY - lastY) * 0.008));
+            lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
+        }, { passive: true });
+        canvas.addEventListener('touchend', () => { dragging = false; setTimeout(() => autoRotate = true, 3000); }, { passive: true });
 
-      // Country dots
-      state.countries.forEach(c => {
-        const p = project(c.lat, c.lon);
-        if (p.z > 0) {
-          ctx.beginPath();
-          ctx.arc(cx + p.x, cy - p.y, 5, 0, Math.PI * 2);
-          ctx.fillStyle = '#00ff88';
-          ctx.fill();
-          ctx.fillStyle = '#fff';
-          ctx.font = '10px "Noto Sans TC"';
-          ctx.fillText(c.name, cx + p.x + 8, cy - p.y + 4);
+        function project(lat, lon) {
+            const phi = (90 - lat) * Math.PI / 180;
+            const theta = (lon + 180) * Math.PI / 180;
+            const R = 200;
+            let x = R * Math.sin(phi) * Math.cos(theta);
+            let y = R * Math.cos(phi);
+            let z = R * Math.sin(phi) * Math.sin(theta);
+            let x2 = x * Math.cos(rotY) - z * Math.sin(rotY);
+            let z2 = x * Math.sin(rotY) + z * Math.cos(rotY);
+            let y2 = y * Math.cos(rotX) - z2 * Math.sin(rotX);
+            let z3 = y * Math.sin(rotX) + z2 * Math.cos(rotX);
+            return { x: x2, y: y2, z: z3 };
         }
-      });
 
-      if (autoRotate) rotY += 0.003;
-      requestAnimationFrame(drawGlobe);
-    }
+        const continents = [
+            [[70, -170], [72, -130], [65, -90], [50, -60], [30, -80], [25, -100], [30, -120], [50, -130], [60, -150], [70, -170]],
+            [[10, -75], [5, -35], [-10, -35], [-35, -55], [-55, -70], [-40, -65], [-20, -40], [0, -50], [10, -75]],
+            [[35, -10], [40, 0], [45, 10], [50, 5], [55, 10], [60, 25], [70, 30], [65, 50], [55, 40], [45, 30], [40, 25], [35, 25], [35, -10]],
+            [[35, -10], [35, 35], [20, 40], [10, 45], [0, 40], [-15, 40], [-35, 20], [-35, 18], [-5, 10], [5, -5], [15, -15], [35, -10]],
+            [[65, 50], [70, 140], [60, 160], [50, 140], [35, 130], [20, 110], [10, 105], [5, 100], [10, 80], [25, 65], [35, 50], [45, 50], [55, 70], [65, 50]],
+            [[-15, 130], [-10, 150], [-25, 153], [-35, 150], [-38, 145], [-35, 115], [-20, 115], [-15, 130]]
+        ];
 
-    // Country click
-    canvas.addEventListener('click', e => {
-      const rect = canvas.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
-      const mx = (e.clientX - rect.left) * dpr;
-      const my = (e.clientY - rect.top) * dpr;
-      const W = canvas.width / dpr, H = canvas.height / dpr;
-      const cx = W / 2, cy = H / 2;
-      let found = null;
-      state.countries.forEach(c => {
-        const p = project(c.lat, c.lon);
-        if (p.z > 0) {
-          const dx = (cx + p.x) * dpr - mx, dy = (cy - p.y) * dpr - my;
-          if (Math.sqrt(dx * dx + dy * dy) < 20) found = c;
+        function drawGlobe() {
+            const W = canvas.width / (window.devicePixelRatio || 1);
+            const H = canvas.height / (window.devicePixelRatio || 1);
+            if (!W || !H) { requestAnimationFrame(drawGlobe); return; }
+            const cx = W / 2, cy = H / 2;
+
+            ctx.clearRect(0, 0, W, H);
+
+            const grd = ctx.createRadialGradient(cx, cy, 180, cx, cy, 260);
+            grd.addColorStop(0, 'rgba(0,255,136,0.05)');
+            grd.addColorStop(1, 'transparent');
+            ctx.fillStyle = grd;
+            ctx.fillRect(0, 0, W, H);
+
+            ctx.beginPath();
+            ctx.arc(cx, cy, 200, 0, Math.PI * 2);
+            ctx.fillStyle = '#0a2540';
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(0,255,136,0.3)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            ctx.strokeStyle = 'rgba(0,255,136,0.08)';
+            ctx.lineWidth = 0.5;
+            for (let lat = -60; lat <= 60; lat += 30) {
+                ctx.beginPath();
+                for (let lon = 0; lon <= 360; lon += 5) {
+                    const p = project(lat, lon - 180);
+                    if (p.z > 0) ctx.lineTo(cx + p.x, cy - p.y);
+                    else ctx.moveTo(cx + p.x, cy - p.y);
+                }
+                ctx.stroke();
+            }
+            for (let lon = -180; lon < 180; lon += 30) {
+                ctx.beginPath();
+                for (let lat = -90; lat <= 90; lat += 5) {
+                    const p = project(lat, lon);
+                    if (p.z > 0) ctx.lineTo(cx + p.x, cy - p.y);
+                    else ctx.moveTo(cx + p.x, cy - p.y);
+                }
+                ctx.stroke();
+            }
+
+            ctx.strokeStyle = 'rgba(0,255,136,0.6)';
+            ctx.fillStyle = 'rgba(0,255,136,0.12)';
+            ctx.lineWidth = 1.2;
+            continents.forEach(cont => {
+                ctx.beginPath();
+                let started = false;
+                cont.forEach(([lat, lon]) => {
+                    const p = project(lat, lon);
+                    if (p.z > 0) {
+                        if (!started) { ctx.moveTo(cx + p.x, cy - p.y); started = true; }
+                        else ctx.lineTo(cx + p.x, cy - p.y);
+                    } else { started = false; }
+                });
+                ctx.fill();
+                ctx.stroke();
+            });
+
+            state.countries.forEach(c => {
+                const p = project(c.lat, c.lon);
+                if (p.z > 0) {
+                    ctx.beginPath();
+                    ctx.arc(cx + p.x, cy - p.y, 5, 0, Math.PI * 2);
+                    ctx.fillStyle = '#00ff88';
+                    ctx.fill();
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '10px "Noto Sans TC"';
+                    ctx.fillText(c.name, cx + p.x + 8, cy - p.y + 4);
+                }
+            });
+
+            if (autoRotate) rotY += 0.003;
+            requestAnimationFrame(drawGlobe);
         }
-      });
-      const info = document.getElementById('country-info');
-      if (found) {
-        document.getElementById('ci-name').textContent = found.name;
-        document.getElementById('ci-details').innerHTML = `
+
+        // 錯誤 4 修正：移除多重相乘的 dpr，讓高解析度螢幕點擊更精準
+        canvas.addEventListener('click', e => {
+            const rect = canvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            const W = canvas.width / dpr, H = canvas.height / dpr;
+            const cx = W / 2, cy = H / 2;
+
+            // 直接使用與投影相同的相對 client 座標計算距離
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+
+            let found = null;
+            state.countries.forEach(c => {
+                const p = project(c.lat, c.lon);
+                if (p.z > 0) {
+                    const dx = (cx + p.x) - clickX;
+                    const dy = (cy - p.y) - clickY;
+                    if (Math.sqrt(dx * dx + dy * dy) < 20) found = c;
+                }
+            });
+            const info = document.getElementById('country-info');
+            if (found) {
+                document.getElementById('ci-name').textContent = found.name;
+                document.getElementById('ci-details').innerHTML = `
       <div>經濟規模: ${found.economy}</div>
       ${found.solar ? `<div>☀️ 太陽: ${found.solar}%</div>` : ''}
       ${found.oil ? `<div>🛢️ 石油: ${found.oil}%</div>` : ''}
@@ -1085,21 +1023,23 @@
       ${found.wind ? `<div>💨 風能: ${found.wind}%</div>` : ''}
       ${found.gas ? `<div>🔥 天然氣: ${found.gas}%</div>` : ''}
     `;
-        info.classList.remove('hidden');
-      } else {
-        info.classList.add('hidden');
-      }
-    });
+                info.classList.remove('hidden');
+            } else {
+                info.classList.add('hidden');
+            }
+        });
 
-    // ─── Init ────────────────────────────────────────────────────
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-    window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 100));
-    render();
-    drawGlobe();
-    lucide.createIcons();
-    initAPIs();
-  </script>
+        // ─── Init ────────────────────────────────────────────────────
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 100));
+
+        // 錯誤 1 監聽器移除：這裡原本有 4 行 addEventListener，已全數刪除，邏輯完美移至 HTML 標籤
+
+        drawGlobe();
+        lucide.createIcons();
+        initAPIs();
+    </script>
 </body>
 
 </html>
