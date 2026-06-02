@@ -642,23 +642,23 @@
           const data = await fetchDirect(
             `https://finnhub.io/api/v1/quote?symbol=${stock.ticker}&token=${CONFIG.FINNHUB_KEY}`
           );
-          if (data?.c && data.c > 0) {
-            const prev = stock.price;
-            stock.price = data.c;
-            stock.prevClose = data.pc;
-            const change = ((data.c - data.pc) / data.pc * 100).toFixed(2);
-            addLog(`✓ ${stock.ticker}: $${data.c.toFixed(2)} (${change >= 0 ? '+' : ''}${change}%)`);
+          // 修正：只要 c 存在且是數字就更新（包含負數情況）
+          if (data && typeof data.c === 'number' && data.c > 0) {
+            stock.price = parseFloat(data.c.toFixed(2));
+            stock.prevClose = data.pc || stock.price;
+            const change = data.pc ? ((data.c - data.pc) / data.pc * 100).toFixed(2) : '0.00';
+            addLog(`✓ ${stock.ticker}: $${stock.price} (${parseFloat(change) >= 0 ? '+' : ''}${change}%)`);
             successCount++;
           }
-          // Finnhub 免費版限速，每次間隔 300ms
           await new Promise(r => setTimeout(r, 300));
         } catch (e) {
-          addLog(`⚠ ${stock.ticker} 股價取得失敗`);
+          addLog(`⚠ ${stock.ticker} 股價取得失敗: ${e.message}`);
         }
       }
+      // 無論成功幾支都強制更新畫面
+      render();
       if (successCount > 0) {
         addLog(`✓ 真實股價已更新 ${successCount}/${realStocks.length} 支`);
-        render();
         return true;
       }
       return false;
