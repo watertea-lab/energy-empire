@@ -213,14 +213,14 @@ const state = {
   cash: 10000,
   energy: { solar: 15, oil: 35, coal: 25, nuclear: 15, wind: 10 },
   stocks: [
-    { ticker: 'XOM',    name: 'ExxonMobil', price: 105, type: 'oil',     real: true },
-    { ticker: 'NEE',    name: 'NextEra',    price: 75,  type: 'solar',   real: true },
-    { ticker: 'ORSTED', name: 'Ørsted',     price: 50,  type: 'wind',    real: false },
-    { ticker: 'CCJ',    name: 'Cameco',     price: 42,  type: 'nuclear', real: true },
-    { ticker: '601857', name: '中國石油',   price: 12,  type: 'oil',     real: false },
-    { ticker: '600688', name: '上海石化',   price: 8.5, type: 'oil',     real: false },
-    { ticker: '600905', name: '三峽能源',   price: 28,  type: 'wind',    real: false },
-    { ticker: '688798', name: '寧德時代',   price: 180, type: 'solar',   real: false }
+    { ticker: 'XOM',    name: 'ExxonMobil', price: 105, type: 'oil',     real: true, src: 'finnhub' },
+    { ticker: 'NEE',    name: 'NextEra',    price: 75,  type: 'solar',   real: true, src: 'finnhub' },
+    { ticker: 'ORSTED', name: 'Ørsted',     price: 50,  type: 'wind',    real: true, src: 'yahoo', ysym: 'ORSTED.CO' },
+    { ticker: 'CCJ',    name: 'Cameco',     price: 42,  type: 'nuclear', real: true, src: 'finnhub' },
+    { ticker: '601857', name: '中國石油',   price: 12,  type: 'oil',     real: true, src: 'yahoo', ysym: '601857.SS' },
+    { ticker: '600688', name: '上海石化',   price: 8.5, type: 'oil',     real: true, src: 'yahoo', ysym: '600688.SS' },
+    { ticker: '600905', name: '三峽能源',   price: 28,  type: 'wind',    real: true, src: 'yahoo', ysym: '600905.SS' },
+    { ticker: '300750', name: '寧德時代',   price: 180, type: 'solar',   real: true, src: 'yahoo', ysym: '300750.SZ' }
   ],
   // CRUD: 持倉紀錄 { ticker, name, qty, avgCost }
   portfolio: [],
@@ -435,9 +435,10 @@ async function fetchRealStocks() {
   let successCount = 0;
   for (const stock of realStocks) {
     try {
-      const data = await fetchDirect(
-        `/api/quote?symbol=${encodeURIComponent(stock.ticker)}`
-      );
+      const url = stock.src === 'yahoo'
+        ? `/api/quote-intl?symbol=${encodeURIComponent(stock.ysym)}`
+        : `/api/quote?symbol=${encodeURIComponent(stock.ticker)}`;
+      const data = await fetchDirect(url);
       // 修正：只要 c 存在且是數字就更新（包含負數情況）
       if (data && typeof data.c === 'number' && data.c > 0) {
         stock.price    = parseFloat(data.c.toFixed(2));
