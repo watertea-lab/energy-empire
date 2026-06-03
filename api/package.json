@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Finnhub proxy for Energy Empire (keeps API key on the server)",
   "main": "src/functions/*.js",
+  "scripts": {
+    "build": "echo No build step needed"
+  },
   "dependencies": {
     "@azure/functions": "^4.5.0"
   }
