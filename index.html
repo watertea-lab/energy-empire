@@ -60,8 +60,9 @@
   <header class="flex items-center justify-between px-3 sm:px-6 py-2 border-b border-emerald-900/40 safe-area" style="background: rgba(5,10,20,0.9);">
     <h1 class="text-lg sm:text-xl font-bold glow" style="font-family:'Orbitron',monospace; color:#00ff88;">Energy Empire</h1>
     <div class="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-emerald-300">
-      <span>回合: <strong id="turn-num">1</strong></span>
-      <span>資金: $<strong id="player-cash">10000</strong>M</span>
+      <span>回合 <strong id="turn-num">1</strong></span>
+      <span>現金 NT$<strong id="player-cash">10,000,000</strong></span>
+      <span>淨值 NT$<strong id="net-worth">10,000,000</strong> <span id="net-return" class="text-emerald-400">+0.0%</span></span>
       <span id="api-status" title="API連線狀態"><span class="api-dot loading"></span></span>
     </div>
   </header>
@@ -147,13 +148,14 @@
           <i data-lucide="swords" style="width:14px;height:14px;"></i> 操作
         </h2>
         <div class="grid grid-cols-2 gap-1 sm:gap-2 text-xs sm:text-sm">
-          <button onclick="invest('solar')" class="bg-yellow-600/30 border border-yellow-500/50 text-yellow-300 rounded px-2 py-1.5 hover:bg-yellow-600/50 transition active:scale-95">☀️ 太陽 -$500M</button>
-          <button onclick="invest('oil')"   class="bg-gray-600/30 border border-gray-500/50 text-gray-300 rounded px-2 py-1.5 hover:bg-gray-600/50 transition active:scale-95">🛢️ 石油 -$500M</button>
-          <button onclick="invest('nuclear')" class="bg-purple-600/30 border border-purple-500/50 text-purple-300 rounded px-2 py-1.5 hover:bg-purple-600/50 transition active:scale-95">⚛️ 核能 -$500M</button>
-          <button onclick="invest('wind')" class="bg-cyan-600/30 border border-cyan-500/50 text-cyan-300 rounded px-2 py-1.5 hover:bg-cyan-600/50 transition active:scale-95">💨 風能 -$500M</button>
+          <button onclick="invest('solar')" class="bg-yellow-600/30 border border-yellow-500/50 text-yellow-300 rounded px-2 py-1.5 hover:bg-yellow-600/50 transition active:scale-95">☀️ 太陽 -50萬</button>
+          <button onclick="invest('oil')"   class="bg-gray-600/30 border border-gray-500/50 text-gray-300 rounded px-2 py-1.5 hover:bg-gray-600/50 transition active:scale-95">🛢️ 石油 -50萬</button>
+          <button onclick="invest('nuclear')" class="bg-purple-600/30 border border-purple-500/50 text-purple-300 rounded px-2 py-1.5 hover:bg-purple-600/50 transition active:scale-95">⚛️ 核能 -50萬</button>
+          <button onclick="invest('wind')" class="bg-cyan-600/30 border border-cyan-500/50 text-cyan-300 rounded px-2 py-1.5 hover:bg-cyan-600/50 transition active:scale-95">💨 風能 -50萬</button>
           <button onclick="openBuyModal()" class="bg-emerald-600/30 border border-emerald-500/50 text-emerald-300 rounded px-2 py-1.5 hover:bg-emerald-600/50 transition active:scale-95">📈 買股票</button>
           <button onclick="openSellModal()" class="bg-orange-600/30 border border-orange-500/50 text-orange-300 rounded px-2 py-1.5 hover:bg-orange-600/50 transition active:scale-95">📉 賣股票</button>
           <button onclick="nextTurn()" class="bg-red-600/30 border border-red-500/50 text-red-300 rounded px-2 py-1.5 hover:bg-red-600/50 transition active:scale-95 col-span-2">⏭️ 下一回合</button>
+          <button onclick="settle()" class="bg-indigo-600/30 border border-indigo-500/50 text-indigo-200 rounded px-2 py-1.5 hover:bg-indigo-600/50 transition active:scale-95 col-span-2">📊 結算</button>
         </div>
       </div>
 
@@ -201,6 +203,17 @@
   </div>
 </div>
 
+<!-- Settle Modal -->
+<div id="settle-modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <h3 class="text-emerald-400 font-bold mb-3" style="font-family:'Orbitron',monospace;">📊 投資結算</h3>
+    <div id="settle-content" class="text-sm text-emerald-200 space-y-1"></div>
+    <div class="flex gap-2 mt-4">
+      <button class="btn-gray" onclick="closeModal('settle-modal')">關閉</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ═══════════════════════════════════════════════
 // 金鑰已移到後端（Azure 環境變數 FINNHUB_KEY）
@@ -210,7 +223,7 @@
 // ─── Game State ───────────────────────────────────────────────
 const state = {
   turn: 1,
-  cash: 10000,
+  cash: 10000000,
   energy: { solar: 15, oil: 35, coal: 25, nuclear: 15, wind: 10 },
   stocks: [
     { ticker: 'XOM',    name: 'ExxonMobil', price: 105, type: 'oil',     real: true, src: 'finnhub', cur: '$',  curCode: 'USD' },
@@ -305,6 +318,60 @@ function toTWD(price, curCode) {
   const r = state.fxRates;
   if (!r || !r.TWD || !r[curCode]) return null;
   return price * (r.TWD / r[curCode]);
+}
+
+// ─── 台幣經濟相關 ─────────────────────────────────────────────
+const START_CAPITAL = 10000000;                      // 起始資金 NT$10,000,000
+function stockTWD(s) { return toTWD(s.price, s.curCode); }   // 該股現價(台幣/股)
+function fmtNT(n) { return 'NT$' + Math.round(n).toLocaleString(); }
+
+// 總資產淨值 = 現金 + 所有持股的台幣市值
+function netWorth() {
+  let holdings = 0;
+  for (const p of state.portfolio) {
+    const s = state.stocks.find(x => x.ticker === p.ticker);
+    const tw = s ? stockTWD(s) : null;
+    holdings += (tw != null ? tw : p.avgCost) * p.qty;   // avgCost 已是台幣
+  }
+  return state.cash + holdings;
+}
+
+// 結算：彈出總結畫面
+function settle() {
+  const nw = netWorth();
+  const ret = (nw - START_CAPITAL) / START_CAPITAL * 100;
+  let best = null, worst = null;
+  for (const p of state.portfolio) {
+    const s = state.stocks.find(x => x.ticker === p.ticker);
+    const tw = s ? stockTWD(s) : p.avgCost;
+    const pct = (tw - p.avgCost) / p.avgCost * 100;
+    if (best === null || pct > best.pct) best = { ticker: p.ticker, pct };
+    if (worst === null || pct < worst.pct) worst = { ticker: p.ticker, pct };
+  }
+  let rank;
+  if (ret >= 30) rank = '🏆 能源大亨';
+  else if (ret >= 10) rank = '🌟 精明投資人';
+  else if (ret >= 0) rank = '🙂 穩健保本';
+  else if (ret >= -15) rank = '😐 小幅虧損';
+  else rank = '💸 再接再厲';
+
+  const fmtPct = v => (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
+  let html = '';
+  html += `<div class="text-emerald-400/70">第 ${state.turn} 回合結算</div>`;
+  html += `<div style="height:6px"></div>`;
+  html += `<div>起始資金：${fmtNT(START_CAPITAL)}</div>`;
+  html += `<div>現金：${fmtNT(state.cash)}</div>`;
+  html += `<div>持股市值：${fmtNT(nw - state.cash)}</div>`;
+  html += `<div class="font-bold text-emerald-300">總資產淨值：${fmtNT(nw)}</div>`;
+  html += `<div style="height:6px"></div>`;
+  html += `<div class="font-bold ${ret>=0?'text-emerald-400':'text-red-400'}">總報酬率：${fmtPct(ret)}</div>`;
+  if (best) html += `<div>最賺持股：${best.ticker} (${fmtPct(best.pct)})</div>`;
+  if (worst && state.portfolio.length > 1) html += `<div>最賠持股：${worst.ticker} (${fmtPct(worst.pct)})</div>`;
+  html += `<div style="height:6px"></div>`;
+  html += `<div class="text-base font-bold">評等：${rank}</div>`;
+
+  document.getElementById('settle-content').innerHTML = html;
+  document.getElementById('settle-modal').classList.remove('hidden');
 }
 
 function setDashboard(id, text, ok = true) {
@@ -526,9 +593,11 @@ function updateApiDot(status) {
 // CREATE：買入
 function openBuyModal() {
   const sel = document.getElementById('buy-ticker');
-  sel.innerHTML = state.stocks.map(s =>
-    `<option value="${s.ticker}">${s.ticker} - ${s.name} (${s.cur || '$'}${s.price.toFixed(1)})</option>`
-  ).join('');
+  sel.innerHTML = state.stocks.map(s => {
+    const tw = stockTWD(s);
+    const twStr = tw != null ? fmtNT(tw) : '—';
+    return `<option value="${s.ticker}">${s.ticker} - ${s.name}（${twStr}/股）</option>`;
+  }).join('');
   document.getElementById('buy-qty').value = 1;
   updateBuyCost();
   document.getElementById('buy-modal').classList.remove('hidden');
@@ -539,9 +608,14 @@ function updateBuyCost() {
   const qty = parseInt(document.getElementById('buy-qty').value) || 0;
   const stock = state.stocks.find(s => s.ticker === ticker);
   if (stock) {
-    const cost = stock.price * qty;
+    const tw = stockTWD(stock);
+    if (tw == null) {
+      document.getElementById('buy-cost').textContent = '匯率載入中,請稍候…';
+      return;
+    }
+    const cost = tw * qty;
     document.getElementById('buy-cost').textContent =
-      `預計花費：$${cost.toFixed(1)}M　(持有資金：$${state.cash}M)`;
+      `預計花費：${fmtNT(cost)}　(現金：${fmtNT(state.cash)})`;
   }
 }
 document.getElementById('buy-ticker').addEventListener('change', updateBuyCost);
@@ -552,22 +626,24 @@ function confirmBuy() {
   const qty = parseInt(document.getElementById('buy-qty').value) || 0;
   if (qty <= 0) return alert('請輸入有效數量');
   const stock = state.stocks.find(s => s.ticker === ticker);
-  const cost = stock.price * qty;
+  const priceTw = stockTWD(stock);
+  if (priceTw == null) return alert('匯率尚未載入,請稍候再試');
+  const cost = priceTw * qty;
   if (cost > state.cash) return alert('資金不足！');
 
   state.cash = Math.round(state.cash - cost);
-  // 找既有持倉或新增
+  // 找既有持倉或新增（avgCost 以台幣計）
   let holding = state.portfolio.find(p => p.ticker === ticker);
   if (holding) {
     // UPDATE avgCost
-    const totalCost = holding.avgCost * holding.qty + stock.price * qty;
+    const totalCost = holding.avgCost * holding.qty + priceTw * qty;
     holding.qty += qty;
     holding.avgCost = totalCost / holding.qty;
   } else {
     // CREATE
-    state.portfolio.push({ ticker, name: stock.name, qty, avgCost: stock.price });
+    state.portfolio.push({ ticker, name: stock.name, qty, avgCost: priceTw });
   }
-  addLog(`買入 ${ticker} x${qty} @$${stock.price.toFixed(1)} (-$${cost.toFixed(1)}M)`);
+  addLog(`買入 ${ticker} x${qty} @${fmtNT(priceTw)} (-${fmtNT(cost)})`);
   closeModal('buy-modal');
   render();
 }
@@ -580,7 +656,8 @@ function openSellModal() {
   const sel = document.getElementById('sell-ticker');
   sel.innerHTML = state.portfolio.map(p => {
     const stock = state.stocks.find(s => s.ticker === p.ticker);
-    const currentPrice = stock ? stock.price : p.avgCost;
+    const tw = stock ? stockTWD(stock) : null;
+    const currentPrice = (tw != null) ? tw : p.avgCost;
     const pnl = ((currentPrice - p.avgCost) / p.avgCost * 100).toFixed(1);
     return `<option value="${p.ticker}">${p.ticker} x${p.qty} (${pnl >= 0 ? '+' : ''}${pnl}%)</option>`;
   }).join('');
@@ -595,10 +672,12 @@ function updateSellInfo() {
   const holding = state.portfolio.find(p => p.ticker === ticker);
   const stock = state.stocks.find(s => s.ticker === ticker);
   if (holding && stock) {
-    const revenue = stock.price * qty;
-    const pnl = (stock.price - holding.avgCost) * qty;
+    const tw = stockTWD(stock);
+    const cur = (tw != null) ? tw : holding.avgCost;
+    const revenue = cur * qty;
+    const pnl = (cur - holding.avgCost) * qty;
     document.getElementById('sell-info').textContent =
-      `持有：${holding.qty}股　預計收回：$${revenue.toFixed(1)}M　損益：${pnl >= 0 ? '+' : ''}$${pnl.toFixed(1)}M`;
+      `持有：${holding.qty}股　預計收回：${fmtNT(revenue)}　損益：${pnl >= 0 ? '+' : ''}${fmtNT(pnl)}`;
   }
 }
 document.getElementById('sell-ticker').addEventListener('change', updateSellInfo);
@@ -613,8 +692,10 @@ function confirmSell() {
   if (qty > holding.qty) return alert(`持有數量不足（僅有 ${holding.qty} 股）`);
 
   const stock = state.stocks.find(s => s.ticker === ticker);
-  const revenue = stock.price * qty;
-  const pnl = (stock.price - holding.avgCost) * qty;
+  const cur = stockTWD(stock);
+  const px = (cur != null) ? cur : holding.avgCost;
+  const revenue = px * qty;
+  const pnl = (px - holding.avgCost) * qty;
   state.cash = Math.round(state.cash + revenue);
 
   if (qty === holding.qty) {
@@ -624,7 +705,7 @@ function confirmSell() {
     // UPDATE：部分賣出
     holding.qty -= qty;
   }
-  addLog(`賣出 ${ticker} x${qty} @$${stock.price.toFixed(1)} (+$${revenue.toFixed(1)}M, 損益:${pnl >= 0 ? '+' : ''}$${pnl.toFixed(1)}M)`);
+  addLog(`賣出 ${ticker} x${qty} @${fmtNT(px)} (+${fmtNT(revenue)}, 損益:${pnl >= 0 ? '+' : ''}${fmtNT(pnl)})`);
   closeModal('sell-modal');
   render();
 }
@@ -681,20 +762,21 @@ function renderPortfolio() {
   let totalPnl = 0;
   el.innerHTML = state.portfolio.map(p => {
     const stock = state.stocks.find(s => s.ticker === p.ticker);
-    const cur = stock ? stock.price : p.avgCost;
+    const tw = stock ? stockTWD(stock) : null;
+    const cur = (tw != null) ? tw : p.avgCost;
     const pnl = (cur - p.avgCost) * p.qty;
     totalPnl += pnl;
     const pct = ((cur - p.avgCost) / p.avgCost * 100).toFixed(1);
     return `<div class="portfolio-row">
       <span class="font-mono text-emerald-300">${p.ticker}</span>
       <span class="text-emerald-200/60">x${p.qty}</span>
-      <span class="text-emerald-200/60">成本$${p.avgCost.toFixed(1)}</span>
-      <span class="${pnl>=0?'text-emerald-400':'text-red-400'}">${pnl>=0?'+':''}$${pnl.toFixed(1)}M (${pct}%)</span>
+      <span class="text-emerald-200/60">成本 ${fmtNT(p.avgCost)}</span>
+      <span class="${pnl>=0?'text-emerald-400':'text-red-400'}">${pnl>=0?'+':''}${fmtNT(pnl)} (${pct}%)</span>
     </div>`;
   }).join('') +
   `<div class="portfolio-row mt-1 border-t border-emerald-500/20 pt-1">
     <span class="text-emerald-300 font-bold">總損益</span>
-    <span class="${totalPnl>=0?'text-emerald-400 font-bold':'text-red-400 font-bold'}">${totalPnl>=0?'+':''}$${totalPnl.toFixed(1)}M</span>
+    <span class="${totalPnl>=0?'text-emerald-400 font-bold':'text-red-400 font-bold'}">${totalPnl>=0?'+':''}${fmtNT(totalPnl)}</span>
   </div>`;
 }
 
@@ -706,6 +788,15 @@ function renderLog() {
 function updateHUD() {
   document.getElementById('turn-num').textContent = state.turn;
   document.getElementById('player-cash').textContent = state.cash.toLocaleString();
+  const nw = netWorth();
+  const nwEl = document.getElementById('net-worth');
+  if (nwEl) nwEl.textContent = Math.round(nw).toLocaleString();
+  const ret = (nw - START_CAPITAL) / START_CAPITAL * 100;
+  const retEl = document.getElementById('net-return');
+  if (retEl) {
+    retEl.textContent = `${ret >= 0 ? '+' : ''}${ret.toFixed(1)}%`;
+    retEl.className = ret >= 0 ? 'text-emerald-400' : 'text-red-400';
+  }
 }
 
 function addLog(msg) {
@@ -722,13 +813,13 @@ function render() {
 
 // ─── Game Actions ─────────────────────────────────────────────
 function invest(type) {
-  if (state.cash < 500) { alert('資金不足！至少需要 $500M'); return; }
-  state.cash -= 500;
+  if (state.cash < 500000) { alert('資金不足！至少需要 NT$500,000'); return; }
+  state.cash -= 500000;
   state.energy[type] = Math.min(60, (state.energy[type] || 0) + 3);
   // 重新正規化，保持總和 100
   const total = Object.values(state.energy).reduce((a,b) => a+b, 0);
   Object.keys(state.energy).forEach(k => state.energy[k] = Math.max(1, Math.round(state.energy[k] / total * 100)));
-  addLog(`投資 ${type} 能源 (-$500M，佔比+3%)`);
+  addLog(`投資 ${type} 能源 (-NT$500,000，佔比+3%)`);
   render();
 }
 
@@ -736,9 +827,9 @@ function nextTurn() {
   state.turn++;
   // 收入：根據再生能源佔比浮動
   const renewableRatio = (state.energy.solar + state.energy.wind) / 100;
-  const income = Math.round(120 + renewableRatio * 80 + Math.random() * 80);
+  const income = Math.round(120000 + renewableRatio * 80000 + Math.random() * 80000);
   state.cash += income;
-  addLog(`回合收入 +$${income}M`);
+  addLog(`回合收入 +${fmtNT(income)}`);
 
   // 股價隨機波動
   state.stocks.forEach(s => {
