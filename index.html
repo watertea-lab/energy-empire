@@ -224,6 +224,7 @@
 const state = {
   turn: 1,
   cash: 10000000,
+  energyInvested: 0,
   energy: { solar: 15, oil: 35, coal: 25, nuclear: 15, wind: 10 },
   stocks: [
     { ticker: 'XOM',    name: 'ExxonMobil', price: 105, type: 'oil',     real: true, src: 'finnhub', cur: '$',  curCode: 'USD' },
@@ -739,6 +740,8 @@ function renderMarket() {
   const icons  = { solar:'☀️', oil:'🛢️', coal:'⚫', nuclear:'⚛️', wind:'💨' };
   const renew = (state.energy.solar || 0) + (state.energy.wind || 0);
   const bonus = Math.round((renew / 100) * RENEWABLE_BONUS);
+  const invested = state.energyInvested || 0;
+  const payback = (invested > 0 && bonus > 0) ? Math.ceil(invested / bonus) : null;
   document.getElementById('energy-market').innerHTML =
     Object.entries(state.energy).map(([k,v]) =>
       `<div class="flex justify-between items-center gap-1">
@@ -749,12 +752,19 @@ function renderMarket() {
         <span class="text-${colors[k]}-200 w-8 text-right">${v}%</span>
       </div>`
     ).join('') +
-    `<div class="mt-1 pt-1 border-t border-emerald-500/20 text-xs">
+    `<div class="mt-1 pt-1 border-t border-emerald-500/20 text-xs space-y-0.5">
       <div class="flex justify-between text-emerald-300 font-bold">
         <span>🌱 再生能源占比</span><span>${renew}%</span>
       </div>
       <div class="flex justify-between text-emerald-400/70">
         <span>綠能加成</span><span>約 ${fmtNT(bonus)}/回合</span>
+      </div>
+      <div class="flex justify-between text-amber-300/90">
+        <span>💰 累計投入能源</span><span>${fmtNT(invested)}</span>
+      </div>
+      <div class="flex justify-between text-amber-200/60">
+        <span>回本回合<span class="text-amber-200/40">(以目前加成計)</span></span>
+        <span>${payback != null ? '約 ' + payback + ' 回合' : '—'}</span>
       </div>
     </div>`;
 }
@@ -844,6 +854,7 @@ function render() {
 function invest(type) {
   if (state.cash < 300000) { alert('資金不足！至少需要 NT$300,000'); return; }
   state.cash -= 300000;
+  state.energyInvested += 300000;
   state.energy[type] = Math.min(60, (state.energy[type] || 0) + 8);
   // 重新正規化，保持總和 100
   const total = Object.values(state.energy).reduce((a,b) => a+b, 0);
