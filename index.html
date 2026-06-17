@@ -519,27 +519,45 @@ async function fetchWorldBankData() {
 }
 
 // ⑤ Finnhub 真實美股股價
+// 抓單一支報價：先試主要來源，Finnhub 失敗時自動改用 Yahoo 後備（同代號美股）
+async function fetchQuote(stock) {
+  const primary = stock.src === 'yahoo'
+    ? `/api/quote-intl?symbol=${encodeURIComponent(stock.ysym)}`
+    : `/api/quote?symbol=${encodeURIComponent(stock.ticker)}`;
+
+  // 1) 主要來源
+  try {
+    const data = await fetchDirect(primary);
+    if (data && typeof data.c === 'number' && data.c > 0) return { data, via: 'primary' };
+  } catch (e) { /* 落到後備 */ }
+
+  // 2) 後備：Finnhub 來源失敗時，改用 Yahoo 抓同一支（美股代號相同、同為美元）
+  if (stock.src !== 'yahoo') {
+    try {
+      const data = await fetchDirect(`/api/quote-intl?symbol=${encodeURIComponent(stock.ticker)}`);
+      if (data && typeof data.c === 'number' && data.c > 0) return { data, via: 'fallback' };
+    } catch (e) { /* 主來源與後備皆失敗 */ }
+  }
+  return null;
+}
+
 async function fetchRealStocks() {
   const realStocks = state.stocks.filter(s => s.real);
   let successCount = 0;
   for (const stock of realStocks) {
-    try {
-      const url = stock.src === 'yahoo'
-        ? `/api/quote-intl?symbol=${encodeURIComponent(stock.ysym)}`
-        : `/api/quote?symbol=${encodeURIComponent(stock.ticker)}`;
-      const data = await fetchDirect(url);
-      // 修正：只要 c 存在且是數字就更新（包含負數情況）
-      if (data && typeof data.c === 'number' && data.c > 0) {
-        stock.price    = parseFloat(data.c.toFixed(2));
-        stock.prevClose = data.pc || stock.price;
-        const change   = data.pc ? ((data.c - data.pc) / data.pc * 100).toFixed(2) : '0.00';
-        addLog(`✓ ${stock.ticker}: $${stock.price} (${parseFloat(change) >= 0 ? '+' : ''}${change}%)`);
-        successCount++;
-      }
-      await new Promise(r => setTimeout(r, 300));
-    } catch (e) {
-      addLog(`⚠ ${stock.ticker} 股價取得失敗: ${e.message}`);
+    const result = await fetchQuote(stock);
+    if (result) {
+      const data = result.data;
+      stock.price     = parseFloat(data.c.toFixed(2));
+      stock.prevClose = data.pc || stock.price;
+      const change = data.pc ? ((data.c - data.pc) / data.pc * 100).toFixed(2) : '0.00';
+      const tag = result.via === 'fallback' ? ' [Yahoo備援]' : '';
+      addLog(`✓ ${stock.ticker}: $${stock.price} (${parseFloat(change) >= 0 ? '+' : ''}${change}%)${tag}`);
+      successCount++;
+    } else {
+      addLog(`⚠ ${stock.ticker} 股價取得失敗（主來源與後備皆無回應）`);
     }
+    await new Promise(r => setTimeout(r, 300));
   }
   // 無論成功幾支都強制更新畫面
   render();
