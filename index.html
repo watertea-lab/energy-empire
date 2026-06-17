@@ -114,16 +114,8 @@
             <div class="text-gray-400 text-xs mb-0.5">💨 台灣AQI</div>
             <div id="rt-aqi" class="text-gray-200 font-bold">載入中...</div>
           </div>
-          <div class="bg-purple-900/20 rounded p-1.5 border border-purple-800/30">
-            <div class="text-purple-400 text-xs mb-0.5">🌍 全球碳排</div>
-            <div id="rt-carbon" class="text-purple-200 font-bold">載入中...</div>
-          </div>
-          <div class="bg-cyan-900/20 rounded p-1.5 border border-cyan-800/30">
-            <div class="text-cyan-400 text-xs mb-0.5">🇹🇼 台灣用電</div>
-            <div id="rt-twenergy" class="text-cyan-200 font-bold">載入中...</div>
-          </div>
         </div>
-        <div id="api-sources" class="text-xs text-emerald-900/60 mt-1.5">資料來源：台電 / EIA / EPA / Ember / 世界銀行</div>
+        <div id="api-sources" class="text-xs text-emerald-900/60 mt-1.5">資料來源：Open-Meteo / EIA</div>
       </div>
 
       <!-- Stock Market -->
@@ -492,33 +484,7 @@ async function fetchAQI() {
   return false;
 }
 
-// ④ 世界銀行：台灣用電 + 全球碳排（原生支援 CORS，不需 Proxy）
-async function fetchWorldBankData() {
-  try {
-    const [twData, co2Data] = await Promise.all([
-      fetchDirect('https://api.worldbank.org/v2/country/TW/indicator/EG.USE.ELEC.KH.PC?format=json&mrv=1'),
-      fetchDirect('https://api.worldbank.org/v2/country/WLD/indicator/EN.ATM.CO2E.KT?format=json&mrv=1')
-    ]);
-
-    const twVal  = twData?.[1]?.[0];
-    const co2Val = co2Data?.[1]?.[0];
-
-    if (twVal?.value) {
-      setDashboard('rt-twenergy', `${Math.round(twVal.value).toLocaleString()} kWh/人`);
-    }
-    if (co2Val?.value) {
-      const gt = (co2Val.value / 1e6).toFixed(1);
-      setDashboard('rt-carbon', `${gt} Gt CO₂`);
-      addLog(`✓ 世界銀行：全球碳排 ${gt} Gt，台灣用電 ${Math.round(twVal?.value||0).toLocaleString()} kWh/人`);
-    }
-    return true;
-  } catch (e) {
-    setDashboard('rt-twenergy', '無法連線 --', false);
-    setDashboard('rt-carbon',   '無法連線 --', false);
-    addLog('⚠ 世界銀行API暫時無法連線');
-  }
-  return false;
-}
+// ④ (已移除) 世界銀行碳排/台灣用電：World Bank API 在瀏覽器端 CORS 受限，且資料庫無台灣資料，故移除此兩項
 
 // ⑤ Finnhub 真實美股股價
 // 抓單一支報價：先試主要來源，Finnhub 失敗時自動改用 Yahoo 後備（同代號美股）
@@ -576,7 +542,6 @@ async function initAPIs() {
     fetchTaiwanPower(),
     fetchOilPrice(),
     fetchAQI(),
-    fetchWorldBankData(),
     fetchFxRates()
   ]);
   // Finnhub 最後跑，確保真實股價不被覆蓋
@@ -594,7 +559,6 @@ async function initAPIs() {
     fetchAQI();
     render();
   }, 60000);
-  setInterval(() => { fetchWorldBankData(); }, 600000);
   // 股價每5分鐘更新（Finnhub 免費版限速）
   setInterval(() => { fetchRealStocks(); }, 300000);
 }
