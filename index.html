@@ -213,14 +213,14 @@ const state = {
   cash: 10000,
   energy: { solar: 15, oil: 35, coal: 25, nuclear: 15, wind: 10 },
   stocks: [
-    { ticker: 'XOM',    name: 'ExxonMobil', price: 105, type: 'oil',     real: true, src: 'finnhub' },
-    { ticker: 'NEE',    name: 'NextEra',    price: 75,  type: 'solar',   real: true, src: 'finnhub' },
-    { ticker: 'ORSTED', name: 'Ørsted',     price: 50,  type: 'wind',    real: true, src: 'yahoo', ysym: 'ORSTED.CO' },
-    { ticker: 'CCJ',    name: 'Cameco',     price: 42,  type: 'nuclear', real: true, src: 'finnhub' },
-    { ticker: '601857', name: '中國石油',   price: 12,  type: 'oil',     real: true, src: 'yahoo', ysym: '601857.SS' },
-    { ticker: '600688', name: '上海石化',   price: 8.5, type: 'oil',     real: true, src: 'yahoo', ysym: '600688.SS' },
-    { ticker: '600905', name: '三峽能源',   price: 28,  type: 'wind',    real: true, src: 'yahoo', ysym: '600905.SS' },
-    { ticker: '300750', name: '寧德時代',   price: 180, type: 'solar',   real: true, src: 'yahoo', ysym: '300750.SZ' }
+    { ticker: 'XOM',    name: 'ExxonMobil', price: 105, type: 'oil',     real: true, src: 'finnhub', cur: '$',  curCode: 'USD' },
+    { ticker: 'NEE',    name: 'NextEra',    price: 75,  type: 'solar',   real: true, src: 'finnhub', cur: '$',  curCode: 'USD' },
+    { ticker: 'ORSTED', name: 'Ørsted',     price: 50,  type: 'wind',    real: true, src: 'yahoo', ysym: 'ORSTED.CO', cur: 'kr', curCode: 'DKK' },
+    { ticker: 'CCJ',    name: 'Cameco',     price: 42,  type: 'nuclear', real: true, src: 'finnhub', cur: '$',  curCode: 'USD' },
+    { ticker: '601857', name: '中國石油',   price: 12,  type: 'oil',     real: true, src: 'yahoo', ysym: '601857.SS', cur: '¥', curCode: 'CNY' },
+    { ticker: '600688', name: '上海石化',   price: 8.5, type: 'oil',     real: true, src: 'yahoo', ysym: '600688.SS', cur: '¥', curCode: 'CNY' },
+    { ticker: '600905', name: '三峽能源',   price: 28,  type: 'wind',    real: true, src: 'yahoo', ysym: '600905.SS', cur: '¥', curCode: 'CNY' },
+    { ticker: '300750', name: '寧德時代',   price: 180, type: 'solar',   real: true, src: 'yahoo', ysym: '300750.SZ', cur: '¥', curCode: 'CNY' }
   ],
   // CRUD: 持倉紀錄 { ticker, name, qty, avgCost }
   portfolio: [],
@@ -283,6 +283,28 @@ async function fetchDirect(url, timeout = 8000) {
     clearTimeout(id);
     throw e;
   }
+}
+
+// 匯率：open.er-api.com 免費、免 key、原生支援 CORS。以 USD 為基準。
+async function fetchFxRates() {
+  try {
+    const data = await fetchDirect('https://open.er-api.com/v6/latest/USD');
+    if (data && data.rates && data.rates.TWD) {
+      state.fxRates = data.rates;   // rates.TWD / rates.DKK / rates.CNY = 每 1 USD = ? 該幣別
+      addLog('✓ 匯率已更新');
+      return true;
+    }
+  } catch (e) {
+    addLog('⚠ 匯率取得失敗');
+  }
+  return false;
+}
+
+// 把某幣別價格換算成台幣：TWD/該幣 = (TWD per USD) / (該幣 per USD)
+function toTWD(price, curCode) {
+  const r = state.fxRates;
+  if (!r || !r.TWD || !r[curCode]) return null;
+  return price * (r.TWD / r[curCode]);
 }
 
 function setDashboard(id, text, ok = true) {
@@ -467,7 +489,8 @@ async function initAPIs() {
     fetchTaiwanPower(),
     fetchOilPrice(),
     fetchAQI(),
-    fetchWorldBankData()
+    fetchWorldBankData(),
+    fetchFxRates()
   ]);
   // Finnhub 最後跑，確保真實股價不被覆蓋
   await fetchRealStocks();
@@ -504,7 +527,7 @@ function updateApiDot(status) {
 function openBuyModal() {
   const sel = document.getElementById('buy-ticker');
   sel.innerHTML = state.stocks.map(s =>
-    `<option value="${s.ticker}">${s.ticker} - ${s.name} ($${s.price.toFixed(1)})</option>`
+    `<option value="${s.ticker}">${s.ticker} - ${s.name} (${s.cur || '$'}${s.price.toFixed(1)})</option>`
   ).join('');
   document.getElementById('buy-qty').value = 1;
   updateBuyCost();
@@ -627,14 +650,23 @@ function renderMarket() {
 }
 
 function renderStocks() {
-  document.getElementById('stock-market').innerHTML =
+  const header = `<div class="flex justify-between items-center gap-1 text-emerald-500/40 text-[10px] mb-0.5">
+    <span class="flex-shrink-0" style="width:50px">代號</span>
+    <span class="flex-1 truncate">名稱</span>
+    <span class="flex-shrink-0 text-right" style="min-width:58px">原幣價</span>
+    <span class="flex-shrink-0 text-right" style="min-width:72px">台幣價</span>
+  </div>`;
+  document.getElementById('stock-market').innerHTML = header +
     state.stocks.map(s => {
       const holding = state.portfolio.find(p => p.ticker === s.ticker);
       const pnl = holding ? ((s.price - holding.avgCost) / holding.avgCost * 100).toFixed(1) : null;
+      const twd = toTWD(s.price, s.curCode);
+      const twdStr = (twd != null) ? `NT$${Math.round(twd).toLocaleString()}` : '—';
       return `<div class="flex justify-between items-center text-emerald-200 gap-1">
-        <span class="font-mono flex-shrink-0 text-xs">${s.ticker}</span>
+        <span class="font-mono flex-shrink-0 text-xs" style="width:50px">${s.ticker}</span>
         <span class="text-emerald-400/60 text-xs flex-1 truncate">${s.name}</span>
-        <span class="font-bold text-xs flex-shrink-0">$${s.price.toFixed(1)}</span>
+        <span class="font-bold text-xs flex-shrink-0 text-right" style="min-width:58px">${s.cur || '$'}${s.price.toFixed(1)}</span>
+        <span class="text-xs flex-shrink-0 text-right text-cyan-300/80" style="min-width:72px">${twdStr}</span>
         ${pnl !== null ? `<span class="text-xs ${parseFloat(pnl)>=0?'text-emerald-400':'text-red-400'}">${pnl>=0?'+':''}${pnl}%</span>` : ''}
       </div>`;
     }).join('');
