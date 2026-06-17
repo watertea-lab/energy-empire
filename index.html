@@ -322,6 +322,7 @@ function toTWD(price, curCode) {
 
 // ─── 台幣經濟相關 ─────────────────────────────────────────────
 const START_CAPITAL = 10000000;                      // 起始資金 NT$10,000,000
+const RENEWABLE_BONUS = 600000;                      // 再生能源每回合收入加成係數（再生占比 × 此值）
 function stockTWD(s) { return toTWD(s.price, s.curCode); }   // 該股現價(台幣/股)
 function fmtNT(n) { return 'NT$' + Math.round(n).toLocaleString(); }
 
@@ -736,6 +737,8 @@ function closeModal(id) {
 function renderMarket() {
   const colors = { solar:'yellow', oil:'gray', coal:'orange', nuclear:'purple', wind:'cyan' };
   const icons  = { solar:'☀️', oil:'🛢️', coal:'⚫', nuclear:'⚛️', wind:'💨' };
+  const renew = (state.energy.solar || 0) + (state.energy.wind || 0);
+  const bonus = Math.round((renew / 100) * RENEWABLE_BONUS);
   document.getElementById('energy-market').innerHTML =
     Object.entries(state.energy).map(([k,v]) =>
       `<div class="flex justify-between items-center gap-1">
@@ -745,7 +748,15 @@ function renderMarket() {
         </div>
         <span class="text-${colors[k]}-200 w-8 text-right">${v}%</span>
       </div>`
-    ).join('');
+    ).join('') +
+    `<div class="mt-1 pt-1 border-t border-emerald-500/20 text-xs">
+      <div class="flex justify-between text-emerald-300 font-bold">
+        <span>🌱 再生能源占比</span><span>${renew}%</span>
+      </div>
+      <div class="flex justify-between text-emerald-400/70">
+        <span>綠能加成</span><span>約 ${fmtNT(bonus)}/回合</span>
+      </div>
+    </div>`;
 }
 
 function renderStocks() {
@@ -831,13 +842,13 @@ function render() {
 
 // ─── Game Actions ─────────────────────────────────────────────
 function invest(type) {
-  if (state.cash < 500000) { alert('資金不足！至少需要 NT$500,000'); return; }
-  state.cash -= 500000;
-  state.energy[type] = Math.min(60, (state.energy[type] || 0) + 3);
+  if (state.cash < 300000) { alert('資金不足！至少需要 NT$300,000'); return; }
+  state.cash -= 300000;
+  state.energy[type] = Math.min(60, (state.energy[type] || 0) + 8);
   // 重新正規化，保持總和 100
   const total = Object.values(state.energy).reduce((a,b) => a+b, 0);
   Object.keys(state.energy).forEach(k => state.energy[k] = Math.max(1, Math.round(state.energy[k] / total * 100)));
-  addLog(`投資 ${type} 能源 (-NT$500,000，佔比+3%)`);
+  addLog(`投資 ${type} 能源 (-NT$300,000，佔比+8%)`);
   render();
 }
 
@@ -845,7 +856,7 @@ function nextTurn() {
   state.turn++;
   // 收入：根據再生能源佔比浮動
   const renewableRatio = (state.energy.solar + state.energy.wind) / 100;
-  const income = Math.round(120000 + renewableRatio * 80000 + Math.random() * 80000);
+  const income = Math.round(120000 + renewableRatio * RENEWABLE_BONUS + Math.random() * 80000);
   state.cash += income;
   addLog(`回合收入 +${fmtNT(income)}`);
 
