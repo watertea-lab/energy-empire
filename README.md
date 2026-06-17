@@ -4,7 +4,7 @@
 
 > 本專案的核心特色之一是「**串接真實 API 數據,並安全保管 API 金鑰**」:需要金鑰的資料來源透過後端 serverless 代理取得,API 金鑰存放於雲端環境變數,完全不暴露於前端原始碼或版本紀錄中。
 
-- 🔗 線上展示:【https://nice-sky-0d0bb0900.7.azurestaticapps.net/】
+- 🔗 線上展示:【https://nice-sky-0d0bb0900.7.azurestaticapps.net/ 】
 - 👤 作者/組員:【請填入姓名與分工】
 - 🏫 課程 / 指導老師 / 學校:【請填入課程資訊】
 
