@@ -207,7 +207,7 @@
   </div>
 </div>
 
-<!-- 背景音樂：兩首輪流播放（請把 bgm1.mp3、bgm2.mp3 放到 repo 根目錄，與 index.html 同層） -->
+<!-- 背景音樂：兩首輪流播放（請把 bgm.mp3、bgm2.mp3 放到 repo 根目錄，與 index.html 同層） -->
 <audio id="bgm" preload="auto"></audio>
 
 <!-- 背景音樂控制（精簡、半透明；平時淡出，滑鼠移上去才變清楚） -->
@@ -1080,11 +1080,11 @@ initAPIs();
 
 // ═══════════════════════════════════════════════
 // 背景音樂：兩首輪流播放 + 自動開始 + 音量/播停控制
-// 兩首檔名：bgm1.mp3、bgm2.mp3（一首播完自動換下一首；只放一首也能用）
+// 兩首檔名：bgm.mp3、bgm2.mp3（一首播完自動換下一首；只放一首也能用）
 // 因瀏覽器政策，無法「載入即出聲」→ 改為第一次互動（點/觸/按鍵）時自動開始
 // ═══════════════════════════════════════════════
 (function () {
-  const PLAYLIST = ['bgm1.mp3', 'bgm2.mp3'];   // 想只用一首：改成 ['bgm1.mp3']
+  const PLAYLIST = ['bgm.mp3', 'bgm2.mp3'];   // 想只用一首：改成 ['bgm.mp3']
   const audio = document.getElementById('bgm');
   let ctx, gain, started = false, idx = 0;
 
