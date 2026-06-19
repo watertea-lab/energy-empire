@@ -148,6 +148,7 @@
           <button onclick="openSellModal()" class="bg-orange-600/30 border border-orange-500/50 text-orange-300 rounded px-2 py-1.5 hover:bg-orange-600/50 transition active:scale-95">📉 賣股票</button>
           <button onclick="nextTurn()" class="bg-red-600/30 border border-red-500/50 text-red-300 rounded px-2 py-1.5 hover:bg-red-600/50 transition active:scale-95 col-span-2">⏭️ 下一回合</button>
           <button onclick="settle()" class="bg-indigo-600/30 border border-indigo-500/50 text-indigo-200 rounded px-2 py-1.5 hover:bg-indigo-600/50 transition active:scale-95 col-span-2">📊 結算</button>
+          <button onclick="resetGame()" class="bg-slate-600/30 border border-slate-500/50 text-slate-300 rounded px-2 py-1.5 hover:bg-slate-600/50 transition active:scale-95 col-span-2 text-xs">🔄 重新開始（清除存檔）</button>
         </div>
       </div>
 
@@ -813,12 +814,42 @@ function addLog(msg) {
   state.log.push(`[回合${state.turn}] ${msg}`);
 }
 
+// ─── 存檔（localStorage 持久化）─────────────────────────────
+const SAVE_KEY = 'energyEmpireSave_v1';
+function saveGame() {
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({
+      turn: state.turn, cash: state.cash, energyInvested: state.energyInvested,
+      energy: state.energy, portfolio: state.portfolio
+    }));
+  } catch (e) { /* 無痕模式或容量限制時略過 */ }
+}
+function loadGame() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return false;
+    const s = JSON.parse(raw);
+    if (typeof s.cash === 'number') state.cash = s.cash;
+    if (typeof s.turn === 'number') state.turn = s.turn;
+    if (typeof s.energyInvested === 'number') state.energyInvested = s.energyInvested;
+    if (s.energy) state.energy = s.energy;
+    if (Array.isArray(s.portfolio)) state.portfolio = s.portfolio;
+    return true;
+  } catch (e) { return false; }
+}
+function resetGame() {
+  if (!confirm('確定要重新開始嗎？目前的資金、持倉與回合將被清除。')) return;
+  try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+  location.reload();
+}
+
 function render() {
   renderMarket();
   renderStocks();
   renderPortfolio();
   renderLog();
   updateHUD();
+  saveGame();   // 每次畫面更新後自動存檔
 }
 
 // ─── Game Actions ─────────────────────────────────────────────
@@ -1038,6 +1069,7 @@ canvas.addEventListener('click', e => {
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 100));
+loadGame();   // 載入上次存檔（若有）
 render();
 drawGlobe();
 lucide.createIcons();
