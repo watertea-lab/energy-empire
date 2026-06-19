@@ -206,6 +206,10 @@
   </div>
 </div>
 
+<!-- 背景音樂開關（右下角浮動） -->
+<button id="music-btn" onclick="toggleMusic(this)" title="背景音樂 開/關"
+  class="fixed bottom-3 right-3 z-50 w-11 h-11 rounded-full flex items-center justify-center text-lg bg-slate-800/80 border border-emerald-500/40 text-emerald-300 shadow-lg hover:bg-slate-700/80 transition active:scale-95">🔈</button>
+
 <script>
 // ═══════════════════════════════════════════════
 // 金鑰已移到後端（Azure 環境變數 FINNHUB_KEY）
@@ -989,7 +993,7 @@ function drawGlobe() {
     }
   });
 
-  if (autoRotate) rotY -= 0.015;
+  if (autoRotate) rotY -= 0.001;
   requestAnimationFrame(drawGlobe);
 }
 
@@ -1035,6 +1039,56 @@ render();
 drawGlobe();
 lucide.createIcons();
 initAPIs();
+
+// ═══════════════════════════════════════════════
+// 背景環境音樂：Web Audio 即時生成（免音檔、免版權）
+// 預設關閉，由右下角按鈕開關；首次點擊才建立音訊（符合瀏覽器自動播放政策）
+// ═══════════════════════════════════════════════
+(function () {
+  let actx, master, started = false, on = false;
+  // 以隨機雜訊產生簡易殘響脈衝，讓音色帶空間感
+  function makeReverb(ctx, sec, decay) {
+    const len = Math.floor(ctx.sampleRate * sec);
+    const buf = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = buf.getChannelData(ch);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
+    }
+    const c = ctx.createConvolver(); c.buffer = buf; return c;
+  }
+  function build() {
+    if (started) return; started = true;
+    actx = new (window.AudioContext || window.webkitAudioContext)();
+    master = actx.createGain(); master.gain.value = 0; master.connect(actx.destination);
+    const rev = makeReverb(actx, 3.5, 2.2); rev.connect(master);
+    const filter = actx.createBiquadFilter();
+    filter.type = 'lowpass'; filter.frequency.value = 550; filter.Q.value = 0.6;
+    filter.connect(rev); filter.connect(master);
+    // 緩慢 LFO 掃濾波，讓鋪底音色會「呼吸」
+    const lfo = actx.createOscillator(), lg = actx.createGain();
+    lfo.frequency.value = 0.05; lg.gain.value = 280;
+    lfo.connect(lg); lg.connect(filter.frequency); lfo.start();
+    // 空靈和弦（A 小調系，低沉鋪底）
+    [55, 82.41, 110, 164.81, 220].forEach((f, i) => {
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = i % 2 ? 'triangle' : 'sine';
+      o.frequency.value = f; o.detune.value = Math.random() * 8 - 4;
+      g.gain.value = 0.16 / (i + 1); o.connect(g); g.connect(filter); o.start();
+    });
+  }
+  window.toggleMusic = function (btn) {
+    if (!started) build();
+    if (actx.state === 'suspended') actx.resume();
+    on = !on;
+    const t = actx.currentTime;
+    master.gain.cancelScheduledValues(t);
+    master.gain.setValueAtTime(master.gain.value, t);
+    master.gain.linearRampToValueAtTime(on ? 0.12 : 0, t + (on ? 1.2 : 0.5));
+    if (btn) btn.textContent = on ? '🔊' : '🔈';
+  };
+  // 想「進場第一次點擊就自動開音樂」可取消下一行的註解：
+  // window.addEventListener('pointerdown', function once(){ if(!on) toggleMusic(document.getElementById('music-btn')); window.removeEventListener('pointerdown', once); }, { once: true });
+})();
 </script>
 </body>
 </html>
