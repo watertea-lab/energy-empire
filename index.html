@@ -140,10 +140,10 @@
           <i data-lucide="swords" style="width:14px;height:14px;"></i> 操作
         </h2>
         <div class="grid grid-cols-2 gap-1 sm:gap-2 text-xs sm:text-sm">
-          <button onclick="invest('solar')" class="bg-yellow-600/30 border border-yellow-500/50 text-yellow-300 rounded px-2 py-1.5 hover:bg-yellow-600/50 transition active:scale-95">☀️ 太陽 -50萬</button>
-          <button onclick="invest('oil')"   class="bg-gray-600/30 border border-gray-500/50 text-gray-300 rounded px-2 py-1.5 hover:bg-gray-600/50 transition active:scale-95">🛢️ 石油 -50萬</button>
-          <button onclick="invest('nuclear')" class="bg-purple-600/30 border border-purple-500/50 text-purple-300 rounded px-2 py-1.5 hover:bg-purple-600/50 transition active:scale-95">⚛️ 核能 -50萬</button>
-          <button onclick="invest('wind')" class="bg-cyan-600/30 border border-cyan-500/50 text-cyan-300 rounded px-2 py-1.5 hover:bg-cyan-600/50 transition active:scale-95">💨 風能 -50萬</button>
+          <button onclick="invest('solar')" class="bg-yellow-600/30 border border-yellow-500/50 text-yellow-300 rounded px-2 py-1.5 hover:bg-yellow-600/50 transition active:scale-95">☀️ 太陽 -30萬</button>
+          <button onclick="invest('oil')"   class="bg-gray-600/30 border border-gray-500/50 text-gray-300 rounded px-2 py-1.5 hover:bg-gray-600/50 transition active:scale-95">🛢️ 石油 -30萬</button>
+          <button onclick="invest('nuclear')" class="bg-purple-600/30 border border-purple-500/50 text-purple-300 rounded px-2 py-1.5 hover:bg-purple-600/50 transition active:scale-95">⚛️ 核能 -30萬</button>
+          <button onclick="invest('wind')" class="bg-cyan-600/30 border border-cyan-500/50 text-cyan-300 rounded px-2 py-1.5 hover:bg-cyan-600/50 transition active:scale-95">💨 風能 -30萬</button>
           <button onclick="openBuyModal()" class="bg-emerald-600/30 border border-emerald-500/50 text-emerald-300 rounded px-2 py-1.5 hover:bg-emerald-600/50 transition active:scale-95">📈 買股票</button>
           <button onclick="openSellModal()" class="bg-orange-600/30 border border-orange-500/50 text-orange-300 rounded px-2 py-1.5 hover:bg-orange-600/50 transition active:scale-95">📉 賣股票</button>
           <button onclick="nextTurn()" class="bg-red-600/30 border border-red-500/50 text-red-300 rounded px-2 py-1.5 hover:bg-red-600/50 transition active:scale-95 col-span-2">⏭️ 下一回合</button>
@@ -989,7 +989,7 @@ function drawGlobe() {
     }
   });
 
-  if (autoRotate) rotY += 0.003;
+  if (autoRotate) rotY -= 0.003;
   requestAnimationFrame(drawGlobe);
 }
 
