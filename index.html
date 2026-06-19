@@ -214,7 +214,7 @@
 <div id="music-ctrl" onpointerdown="event.stopPropagation()"
   class="fixed bottom-3 right-3 z-50 flex items-center gap-2 px-2.5 py-1.5 rounded-full bg-slate-900/55 backdrop-blur border border-white/10 text-slate-300 shadow opacity-60 hover:opacity-100 transition">
   <button id="music-toggle" onclick="musicToggle()" title="播放／停止" class="text-base leading-none">▶️</button>
-  <input id="music-vol" type="range" min="0" max="2" step="0.05" value="1" oninput="musicVolume(this.value)" title="音量" class="w-16 accent-emerald-400 cursor-pointer">
+  <input id="music-vol" type="range" min="0" max="1" step="0.05" value="1" oninput="musicVolume(this.value)" title="音量" class="w-16 accent-emerald-400 cursor-pointer">
 </div>
 
 <script>
@@ -1079,24 +1079,17 @@ lucide.createIcons();
 initAPIs();
 
 // ═══════════════════════════════════════════════
-// 背景音樂：兩首輪流播放 + 自動開始 + 音量/播停控制
+// 背景音樂：兩首輪流播放 + 自動開始 + 音量/播停控制（純 <audio>，最穩）
 // 兩首檔名：bgm.mp3、bgm2.mp3（一首播完自動換下一首；只放一首也能用）
-// 因瀏覽器政策，無法「載入即出聲」→ 改為第一次互動（點/觸/按鍵）時自動開始
+// 因瀏覽器政策，無法「載入即出聲」→ 第一次互動（點/觸/按鍵）時自動開始
 // ═══════════════════════════════════════════════
 (function () {
   const PLAYLIST = ['bgm.mp3', 'bgm2.mp3'];   // 想只用一首：改成 ['bgm.mp3']
   const audio = document.getElementById('bgm');
-  let ctx, gain, started = false, idx = 0;
+  let idx = 0;
+  const volEl = document.getElementById('music-vol');
+  audio.volume = volEl ? (parseFloat(volEl.value) || 1) : 1;
 
-  function ensureCtx() {
-    if (started) return;
-    started = true;
-    ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const src = ctx.createMediaElementSource(audio);
-    gain = ctx.createGain();
-    gain.gain.value = parseFloat(document.getElementById('music-vol').value) || 1;
-    src.connect(gain); gain.connect(ctx.destination);
-  }
   function setIcon(playing) {
     const b = document.getElementById('music-toggle');
     if (b) b.textContent = playing ? '⏸️' : '▶️';
@@ -1104,30 +1097,25 @@ initAPIs();
   function playTrack(i) {
     idx = ((i % PLAYLIST.length) + PLAYLIST.length) % PLAYLIST.length;
     audio.src = PLAYLIST[idx];
-    audio.play().catch(() => {});
+    audio.play().then(() => setIcon(true))
+                .catch((e) => console.warn('[音樂] 播放失敗，請確認 ' + PLAYLIST[idx] + ' 是否存在：', e));
   }
-  // 一首播完自動換下一首（輪流）
-  audio.addEventListener('ended', () => playTrack(idx + 1));
+  audio.addEventListener('ended', () => playTrack(idx + 1));   // 一首播完換下一首
+  audio.addEventListener('error', () => console.warn('[音樂] 檔案載入失敗：', audio.src));
 
-  function startMusic() {
-    ensureCtx();
-    if (ctx.state === 'suspended') ctx.resume();
-    if (!audio.src) playTrack(0); else audio.play().catch(() => {});
-    setIcon(true);
-  }
   window.musicToggle = function () {
-    ensureCtx();
-    if (ctx.state === 'suspended') ctx.resume();
-    if (audio.paused) { if (!audio.src) playTrack(0); else audio.play().catch(() => {}); setIcon(true); }
-    else { audio.pause(); setIcon(false); }
+    if (audio.paused) {
+      if (!audio.src) playTrack(0);
+      else audio.play().then(() => setIcon(true)).catch(() => {});
+    } else { audio.pause(); setIcon(false); }
   };
   window.musicVolume = function (v) {
-    ensureCtx();
-    gain.gain.value = parseFloat(v);   // 0~2，可放大到超過 1（音量滑桿）
+    audio.volume = Math.max(0, Math.min(1, parseFloat(v)));   // <audio> 音量 0~1
   };
-  // 自動開始：第一次點/觸/按鍵就播（音樂控制本身已 stopPropagation，不會誤觸）
+
+  // 自動開始：第一次點/觸/按鍵就播（控制條本身已 stopPropagation，不會誤觸）
   function autoStart() {
-    startMusic();
+    if (!audio.src) playTrack(0); else audio.play().then(() => setIcon(true)).catch(() => {});
     window.removeEventListener('pointerdown', autoStart);
     window.removeEventListener('keydown', autoStart);
   }
