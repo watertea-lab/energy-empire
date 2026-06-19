@@ -60,7 +60,8 @@
   <header class="flex items-center justify-between px-3 sm:px-6 py-2 border-b border-emerald-900/40 safe-area" style="background: rgba(5,10,20,0.9);">
     <h1 class="text-lg sm:text-xl font-bold glow" style="font-family:'Orbitron',monospace; color:#00ff88;">Energy Empire</h1>
     <div class="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-emerald-300">
-      <span>回合 <strong id="turn-num">1</strong></span>
+      <span class="game-only">回合 <strong id="turn-num">1</strong></span>
+      <span class="invest-only hidden">📈 模擬投資中</span>
       <span>現金 NT$<strong id="player-cash">10,000,000</strong></span>
       <span>淨值 NT$<strong id="net-worth">10,000,000</strong> <span id="net-return" class="text-emerald-400">+0.0%</span></span>
       <span id="api-status" title="API連線狀態"><span class="api-dot loading"></span></span>
@@ -139,14 +140,22 @@
         <h2 class="text-emerald-400 font-bold mb-2 flex items-center gap-1 text-xs sm:text-sm" style="font-family:'Orbitron',monospace;">
           <i data-lucide="swords" style="width:14px;height:14px;"></i> 操作
         </h2>
+        <!-- 模式切換 -->
+        <div class="flex gap-1 sm:gap-2 mb-2">
+          <button id="mode-game" onclick="switchMode('game')">🎮 遊戲展示</button>
+          <button id="mode-invest" onclick="switchMode('invest')">📈 模擬投資</button>
+        </div>
+        <!-- 投資模式資訊列 -->
+        <div id="invest-info" class="invest-only hidden mb-2 text-[11px] sm:text-xs text-emerald-200/90 bg-slate-900/40 border border-emerald-900/40 rounded px-2 py-1.5"></div>
         <div class="grid grid-cols-2 gap-1 sm:gap-2 text-xs sm:text-sm">
-          <button onclick="invest('solar')" class="bg-yellow-600/30 border border-yellow-500/50 text-yellow-300 rounded px-2 py-1.5 hover:bg-yellow-600/50 transition active:scale-95">☀️ 太陽 -30萬</button>
-          <button onclick="invest('oil')"   class="bg-gray-600/30 border border-gray-500/50 text-gray-300 rounded px-2 py-1.5 hover:bg-gray-600/50 transition active:scale-95">🛢️ 石油 -30萬</button>
-          <button onclick="invest('nuclear')" class="bg-purple-600/30 border border-purple-500/50 text-purple-300 rounded px-2 py-1.5 hover:bg-purple-600/50 transition active:scale-95">⚛️ 核能 -30萬</button>
-          <button onclick="invest('wind')" class="bg-cyan-600/30 border border-cyan-500/50 text-cyan-300 rounded px-2 py-1.5 hover:bg-cyan-600/50 transition active:scale-95">💨 風能 -30萬</button>
+          <button onclick="invest('solar')" class="game-only bg-yellow-600/30 border border-yellow-500/50 text-yellow-300 rounded px-2 py-1.5 hover:bg-yellow-600/50 transition active:scale-95">☀️ 太陽 -30萬</button>
+          <button onclick="invest('oil')"   class="game-only bg-gray-600/30 border border-gray-500/50 text-gray-300 rounded px-2 py-1.5 hover:bg-gray-600/50 transition active:scale-95">🛢️ 石油 -30萬</button>
+          <button onclick="invest('nuclear')" class="game-only bg-purple-600/30 border border-purple-500/50 text-purple-300 rounded px-2 py-1.5 hover:bg-purple-600/50 transition active:scale-95">⚛️ 核能 -30萬</button>
+          <button onclick="invest('wind')" class="game-only bg-cyan-600/30 border border-cyan-500/50 text-cyan-300 rounded px-2 py-1.5 hover:bg-cyan-600/50 transition active:scale-95">💨 風能 -30萬</button>
           <button onclick="openBuyModal()" class="bg-emerald-600/30 border border-emerald-500/50 text-emerald-300 rounded px-2 py-1.5 hover:bg-emerald-600/50 transition active:scale-95">📈 買股票</button>
           <button onclick="openSellModal()" class="bg-orange-600/30 border border-orange-500/50 text-orange-300 rounded px-2 py-1.5 hover:bg-orange-600/50 transition active:scale-95">📉 賣股票</button>
-          <button onclick="nextTurn()" class="bg-red-600/30 border border-red-500/50 text-red-300 rounded px-2 py-1.5 hover:bg-red-600/50 transition active:scale-95 col-span-2">⏭️ 下一回合</button>
+          <button onclick="nextTurn()" class="game-only bg-red-600/30 border border-red-500/50 text-red-300 rounded px-2 py-1.5 hover:bg-red-600/50 transition active:scale-95 col-span-2">⏭️ 下一回合</button>
+          <button onclick="refreshQuotes()" class="invest-only hidden bg-teal-600/30 border border-teal-500/50 text-teal-200 rounded px-2 py-1.5 hover:bg-teal-600/50 transition active:scale-95 col-span-2">🔄 刷新真實報價</button>
           <button onclick="settle()" class="bg-indigo-600/30 border border-indigo-500/50 text-indigo-200 rounded px-2 py-1.5 hover:bg-indigo-600/50 transition active:scale-95 col-span-2">📊 結算</button>
           <button onclick="resetGame()" class="bg-slate-600/30 border border-slate-500/50 text-slate-300 rounded px-2 py-1.5 hover:bg-slate-600/50 transition active:scale-95 col-span-2 text-xs">🔄 重新開始（清除存檔）</button>
         </div>
@@ -228,6 +237,8 @@ const state = {
   turn: 1,
   cash: 10000000,
   energyInvested: 0,
+  mode: 'game',            // 'game' 遊戲展示 ｜ 'invest' 模擬投資
+  investStart: null,       // 投資模式起始時間（ms）
   energy: { solar: 15, oil: 35, coal: 25, nuclear: 15, wind: 10 },
   stocks: [
     { ticker: 'XOM',    name: 'ExxonMobil', price: 105, type: 'oil',     real: true, src: 'finnhub', cur: '$',  curCode: 'USD' },
@@ -362,7 +373,7 @@ function settle() {
 
   const fmtPct = v => (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
   let html = '';
-  html += `<div class="text-emerald-400/70">第 ${state.turn} 回合結算</div>`;
+  html += `<div class="text-emerald-400/70">${state.mode === 'invest' ? '模擬投資結算' : '第 ' + state.turn + ' 回合結算'}</div>`;
   html += `<div style="height:6px"></div>`;
   html += `<div>起始資金：${fmtNT(START_CAPITAL)}</div>`;
   html += `<div>現金：${fmtNT(state.cash)}</div>`;
@@ -571,7 +582,7 @@ async function initAPIs() {
     render();
   }, 60000);
   // 股價每5分鐘更新（Finnhub 免費版限速）
-  setInterval(() => { fetchRealStocks(); }, 300000);
+  setInterval(() => { if (state.mode === 'invest') fetchRealStocks(); }, 300000);
 }
 
 function updateApiDot(status) {
@@ -817,19 +828,20 @@ function addLog(msg) {
   state.log.push(`[回合${state.turn}] ${msg}`);
 }
 
-// ─── 存檔（localStorage 持久化）─────────────────────────────
-const SAVE_KEY = 'energyEmpireSave_v1';
+// ─── 雙模式 + 各自獨立存檔（localStorage 持久化）─────────────
+const SAVE_KEYS = { game: 'energyEmpireSave_game_v1', invest: 'energyEmpireSave_invest_v1' };
+const MODE_KEY = 'energyEmpireMode';
 function saveGame() {
   try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify({
+    localStorage.setItem(SAVE_KEYS[state.mode], JSON.stringify({
       turn: state.turn, cash: state.cash, energyInvested: state.energyInvested,
-      energy: state.energy, portfolio: state.portfolio
+      energy: state.energy, portfolio: state.portfolio, investStart: state.investStart
     }));
   } catch (e) { /* 無痕模式或容量限制時略過 */ }
 }
-function loadGame() {
+function loadGame(mode) {
   try {
-    const raw = localStorage.getItem(SAVE_KEY);
+    const raw = localStorage.getItem(SAVE_KEYS[mode]);
     if (!raw) return false;
     const s = JSON.parse(raw);
     if (typeof s.cash === 'number') state.cash = s.cash;
@@ -837,14 +849,51 @@ function loadGame() {
     if (typeof s.energyInvested === 'number') state.energyInvested = s.energyInvested;
     if (s.energy) state.energy = s.energy;
     if (Array.isArray(s.portfolio)) state.portfolio = s.portfolio;
+    if (typeof s.investStart === 'number') state.investStart = s.investStart;
     return true;
   } catch (e) { return false; }
 }
+// 投資模式乾淨起始：固定 NT$1000萬、從當下起算
+function freshInvest() {
+  state.cash = START_CAPITAL; state.energyInvested = 0;
+  state.portfolio = []; state.turn = 1; state.investStart = Date.now();
+}
 function resetGame() {
-  if (!confirm('確定要重新開始嗎？目前的資金、持倉與回合將被清除。')) return;
-  try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+  const msg = state.mode === 'invest'
+    ? '確定要開始一段新的模擬投資嗎？將以 NT$10,000,000、從現在重新計時。'
+    : '確定要重新開始嗎？目前的資金、持倉與回合將被清除。';
+  if (!confirm(msg)) return;
+  try { localStorage.removeItem(SAVE_KEYS[state.mode]); } catch (e) {}
   location.reload();
 }
+function switchMode(mode) {
+  if (mode === state.mode) return;
+  saveGame();                                  // 先存好目前模式
+  try { localStorage.setItem(MODE_KEY, mode); } catch (e) {}
+  location.reload();                           // 重新載入 → 依模式載入對應存檔
+}
+function modeBtnClass(active) {
+  return 'flex-1 rounded px-2 py-1.5 text-xs sm:text-sm transition ' +
+    (active ? 'bg-emerald-500/30 border border-emerald-400/60 text-emerald-200 font-bold'
+            : 'bg-slate-700/30 border border-slate-600/40 text-slate-400 hover:bg-slate-700/50');
+}
+function applyModeUI() {
+  const invest = state.mode === 'invest';
+  document.querySelectorAll('.game-only').forEach(el => el.classList.toggle('hidden', invest));
+  document.querySelectorAll('.invest-only').forEach(el => el.classList.toggle('hidden', !invest));
+  const gBtn = document.getElementById('mode-game'), iBtn = document.getElementById('mode-invest');
+  if (gBtn && iBtn) { gBtn.className = modeBtnClass(!invest); iBtn.className = modeBtnClass(invest); }
+}
+function updateInvestInfo() {
+  const el = document.getElementById('invest-info');
+  if (!el) return;
+  const nw = netWorth();
+  const ret = (nw - START_CAPITAL) / START_CAPITAL * 100;
+  const startTxt = state.investStart ? new Date(state.investStart).toLocaleString('zh-TW', { hour12: false }) : '—';
+  el.innerHTML = `起始 ${startTxt}　|　淨值 ${fmtNT(nw)}　|　` +
+    `<span class="${ret >= 0 ? 'text-emerald-400' : 'text-red-400'} font-bold">報酬率 ${(ret >= 0 ? '+' : '') + ret.toFixed(2)}%</span>`;
+}
+async function refreshQuotes() { await fetchRealStocks(); render(); }
 
 function render() {
   renderMarket();
@@ -852,6 +901,7 @@ function render() {
   renderPortfolio();
   renderLog();
   updateHUD();
+  if (state.mode === 'invest') updateInvestInfo();
   saveGame();   // 每次畫面更新後自動存檔
 }
 
@@ -869,6 +919,7 @@ function invest(type) {
 }
 
 function nextTurn() {
+  if (state.mode === 'invest') return;   // 投資模式無回合
   state.turn++;
   // 收入：根據再生能源佔比浮動
   const renewableRatio = (state.energy.solar + state.energy.wind) / 100;
@@ -1072,7 +1123,10 @@ canvas.addEventListener('click', e => {
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 100));
-loadGame();   // 載入上次存檔（若有）
+// 依上次選擇的模式載入對應存檔（兩模式各自獨立）
+try { state.mode = (localStorage.getItem(MODE_KEY) === 'invest') ? 'invest' : 'game'; } catch (e) {}
+if (!loadGame(state.mode) && state.mode === 'invest') freshInvest();  // 投資模式無存檔 → 乾淨起始
+applyModeUI();
 render();
 drawGlobe();
 lucide.createIcons();
