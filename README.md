@@ -6,7 +6,7 @@
 
 - 🔗 線上展示:【https://nice-sky-0d0bb0900.7.azurestaticapps.net 】
 - 👤 作者/組員:【江O銘 林O宣 康O崴】
-- 🏫 課程 / 指導老師 / 學校:【JavaScript網頁設計 / 張O雅老師 / 淡江大學】
+- 🏫 課程 / 指導老師 / 學校:【JavaScript網頁設計 / 張老師 / 淡江大學】
 
 ---
 
