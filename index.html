@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content=\"yes\">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Energy Empire</title>
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
@@ -14,1094 +14,732 @@
     html, body { width: 100%; height: 100%; margin: 0; padding: 0; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
     body { -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
     #app { width: 100%; height: 100%; }
-    .globe-canvas { display: block; width: 100%; height: 100%; touch-action: none; }
-    .glow { text-shadow: 0 0 10px rgba(0,255,136,0.5); }
-    .panel { backdrop-filter: blur(12px); background: rgba(10,20,30,0.85); border: 1px solid rgba(0,255,136,0.2); }
-    @keyframes slideUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
-    .slide-up { animation: slideUp 0.6s ease forwards; }
-    .safe-area { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); padding-top: env(safe-area-inset-top); }
-    @media (max-width: 640px) {
-      .panel { padding: 0.75rem; }
-      header { min-height: 50px; }
-    }
-    /* Modal */
-    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 50; display: flex; align-items: center; justify-content: center; }
-    .modal-box { background: #0a141e; border: 1px solid rgba(0,255,136,0.4); border-radius: 12px; padding: 1.5rem; min-width: 280px; max-width: 90vw; color: #a7f3d0; }
-    .modal-box input, .modal-box select {
-      background: rgba(0,255,136,0.08);
-      border: 1px solid rgba(0,255,136,0.3);
-      color: #a7f3d0;
-      border-radius: 6px;
-      padding: 6px 10px;
-      width: 100%;
-      margin-top: 4px;
-      font-size: 13px;
-    }
-    .modal-box label { font-size: 12px; color: #6ee7b7; display: block; margin-top: 10px; }
-    .btn-green { background: rgba(0,255,136,0.15); border: 1px solid rgba(0,255,136,0.4); color: #00ff88; border-radius: 6px; padding: 6px 16px; cursor: pointer; font-size: 13px; transition: background 0.2s; }
-    .btn-green:hover { background: rgba(0,255,136,0.3); }
-    .btn-red { background: rgba(255,80,80,0.15); border: 1px solid rgba(255,80,80,0.4); color: #f87171; border-radius: 6px; padding: 6px 16px; cursor: pointer; font-size: 13px; }
-    .btn-gray { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: #9ca3af; border-radius: 6px; padding: 6px 16px; cursor: pointer; font-size: 13px; }
-    /* Portfolio table */
-    .portfolio-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid rgba(0,255,136,0.08); font-size: 12px; gap: 4px; }
-    .portfolio-row:last-child { border-bottom: none; }
-    /* API status dot */
-    .api-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 4px; }
-    .api-dot.ok { background: #00ff88; }
-    .api-dot.fail { background: #f87171; }
-    .api-dot.loading { background: #fbbf24; animation: pulse 1s infinite; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    .globe-canvas { display: block; width: 100%; height: 100%; background: radial-gradient(circle at center, #080d1a 0%, #02040a 100%); }
+    .hud-panel { background: rgba(10, 17, 34, 0.65); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(16, 185, 129, 0.2); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); }
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: rgba(2,4,10,0.3); }
+    ::-webkit-scrollbar-thumb { background: rgba(16,185,129,0.3); border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(16,185,129,0.5); }
+    @keyframes pulse-fast { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
+    .animate-pulse-fast { animation: pulse-fast 1s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
   </style>
 </head>
-<body class="h-full w-full overflow-hidden" style="background: #0a0e1a; font-family: 'Noto Sans TC', sans-serif;">
-<div id="app" class="h-full w-full relative flex flex-col">
-
-  <!-- Header -->
-  <header class="flex items-center justify-between px-3 sm:px-6 py-2 border-b border-emerald-900/40 safe-area" style="background: rgba(5,10,20,0.9);">
-    <h1 class="text-lg sm:text-xl font-bold glow" style="font-family:'Orbitron',monospace; color:#00ff88;">Energy Empire</h1>
-    <div class="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-emerald-300">
-      <span>回合 <strong id="turn-num">1</strong></span>
-      <span>現金 NT$<strong id="player-cash">10,000,000</strong></span>
-      <span>淨值 NT$<strong id="net-worth">10,000,000</strong> <span id="net-return" class="text-emerald-400">+0.0%</span></span>
-      <span id="api-status" title="API連線狀態"><span class="api-dot loading"></span></span>
-    </div>
-  </header>
-
-  <!-- Main -->
-  <div class="flex-1 flex flex-col overflow-hidden">
-
-    <!-- Globe Section -->
-    <div class="flex-1 relative flex items-center justify-center" style="min-height:0;">
+<body class="bg-[#02040a] text-slate-100 font-['Noto_Sans_TC'] overflow-hidden h-full">
+  <div id="app" class="relative flex flex-col justify-between p-3 md:p-5 box-border">
+    <div class="absolute inset-0 z-0">
       <canvas id="globe" class="globe-canvas"></canvas>
-
-      <!-- Country Info -->
-      <div id="country-info" class="hidden absolute top-3 left-3 sm:top-4 sm:left-4 panel rounded-lg p-3 text-emerald-200 text-xs sm:text-sm slide-up" style="min-width:160px;max-width:200px;z-index:10;">
-        <h3 id="ci-name" class="text-emerald-400 font-bold text-sm mb-2"></h3>
-        <div id="ci-details" style="line-height:1.4;"></div>
-      </div>
     </div>
 
-    <!-- Bottom Panel -->
-    <aside class="w-full overflow-y-auto p-2 sm:p-3 space-y-2 sm:space-y-3 border-t border-emerald-900/30" style="background:rgba(5,10,20,0.95);max-height:50%;-webkit-overflow-scrolling:touch;">
-
-      <!-- Energy Market -->
-      <div class="panel rounded-lg p-2 sm:p-4 slide-up">
-        <h2 class="text-emerald-400 font-bold mb-2 flex items-center gap-1 text-xs sm:text-sm" style="font-family:'Orbitron',monospace;">
-          <i data-lucide="zap" style="width:14px;height:14px;"></i> 能源市場
-        </h2>
-        <div id="energy-market" class="space-y-1 text-xs"></div>
+    <header class="hud-panel relative z-10 w-full rounded-xl px-4 py-3 flex justify-between items-center shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse-fast"></div>
+        <h1 class="font-['Orbitron'] font-black tracking-widest text-emerald-400 text-lg md:text-xl">ENERGY EMPIRE</h1>
       </div>
-
-      <!-- 即時數據儀表板 -->
-      <div class="panel rounded-lg p-2 sm:p-4 slide-up" style="animation-delay:0.05s;">
-        <h2 class="text-emerald-400 font-bold mb-2 flex items-center gap-1 text-xs sm:text-sm" style="font-family:'Orbitron',monospace;">
-          <i data-lucide="activity" style="width:14px;height:14px;"></i> 即時數據
-        </h2>
-        <div id="realtime-dashboard" class="grid grid-cols-2 gap-1 text-xs">
-          <div class="bg-emerald-900/20 rounded p-1.5 border border-emerald-800/30">
-            <div class="text-emerald-500 text-xs mb-0.5">🛢️ WTI油價</div>
-            <div id="rt-oil" class="text-emerald-200 font-bold">載入中...</div>
-          </div>
-          <div class="bg-blue-900/20 rounded p-1.5 border border-blue-800/30">
-            <div class="text-blue-400 text-xs mb-0.5">⚡ 台電備轉</div>
-            <div id="rt-power" class="text-blue-200 font-bold">載入中...</div>
-          </div>
-          <div class="bg-yellow-900/20 rounded p-1.5 border border-yellow-800/30">
-            <div class="text-yellow-500 text-xs mb-0.5">☀️ 台灣太陽能</div>
-            <div id="rt-solar" class="text-yellow-200 font-bold">載入中...</div>
-          </div>
-          <div class="bg-gray-900/20 rounded p-1.5 border border-gray-700/30">
-            <div class="text-gray-400 text-xs mb-0.5">💨 台灣AQI</div>
-            <div id="rt-aqi" class="text-gray-200 font-bold">載入中...</div>
-          </div>
+      <div class="flex items-center gap-4 md:gap-6 text-xs md:text-sm font-['Orbitron']">
+        <div class="text-right">
+          <span class="text-slate-400 block text-[10px] uppercase tracking-wider">Turn</span>
+          <span id="stat-turn" class="text-emerald-400 font-bold text-base md:text-lg">1</span>
         </div>
-        <div id="api-sources" class="text-xs text-emerald-900/60 mt-1.5">資料來源：Open-Meteo / EIA</div>
+        <div class="text-right">
+          <span class="text-slate-400 block text-[10px] uppercase tracking-wider">Funds</span>
+          <span id="stat-funds" class="text-emerald-400 font-bold text-base md:text-lg">$1,000,000</span>
+        </div>
+        <div class="text-right">
+          <span class="text-slate-400 block text-[10px] uppercase tracking-wider">Clean Power</span>
+          <span id="stat-clean" class="text-emerald-400 font-bold text-base md:text-lg">0%</span>
+        </div>
       </div>
+    </header>
 
-      <!-- Stock Market -->
-      <div class="panel rounded-lg p-2 sm:p-4 slide-up" style="animation-delay:0.1s;">
-        <h2 class="text-emerald-400 font-bold mb-2 flex items-center gap-1 text-xs sm:text-sm" style="font-family:'Orbitron',monospace;">
-          <i data-lucide="trending-up" style="width:14px;height:14px;"></i> 股票市場
-        </h2>
-        <div id="stock-market" class="space-y-1 text-xs"></div>
+    <main class="relative z-10 flex-grow w-full my-4 overflow-hidden pointer-events-none flex items-center justify-center">
+      <div id="country-info" class="hud-panel pointer-events-auto rounded-xl p-4 w-72 max-w-full opacity-0 translate-y-4 transition-all duration-300 shadow-2xl absolute">
+        <div class="flex justify-between items-start mb-3 border-b border-emerald-500/20 pb-2">
+          <h2 id="ci-name" class="text-emerald-400 font-bold text-base tracking-wide">國家名稱</h2>
+          <button onclick="closeCountryInfo()" class="text-slate-400 hover:text-slate-200 transition-colors">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+        <div id="ci-details" class="space-y-2 text-xs text-slate-300"></div>
+        <div class="mt-4 flex gap-2">
+          <button onclick="investGreen()" class="flex-1 bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/40 text-emerald-300 font-medium py-1.5 px-3 rounded-lg text-xs transition-all active:scale-95">投資綠能 (-$200K)</button>
+        </div>
       </div>
+    </main>
 
-      <!-- Portfolio (持倉) -->
-      <div class="panel rounded-lg p-2 sm:p-4 slide-up" style="animation-delay:0.15s;">
-        <h2 class="text-emerald-400 font-bold mb-2 flex items-center gap-1 text-xs sm:text-sm" style="font-family:'Orbitron',monospace;">
-          <i data-lucide="briefcase" style="width:14px;height:14px;"></i> 我的持倉
-        </h2>
-        <div id="portfolio" class="text-xs text-emerald-200/70">尚未持有任何股票</div>
-      </div>
-
-      <!-- Actions -->
-      <div class="panel rounded-lg p-2 sm:p-4 slide-up" style="animation-delay:0.2s;">
-        <h2 class="text-emerald-400 font-bold mb-2 flex items-center gap-1 text-xs sm:text-sm" style="font-family:'Orbitron',monospace;">
-          <i data-lucide="swords" style="width:14px;height:14px;"></i> 操作
-        </h2>
-        <div class="grid grid-cols-2 gap-1 sm:gap-2 text-xs sm:text-sm">
-          <button onclick="invest('solar')" class="bg-yellow-600/30 border border-yellow-500/50 text-yellow-300 rounded px-2 py-1.5 hover:bg-yellow-600/50 transition active:scale-95">☀️ 太陽 -30萬</button>
-          <button onclick="invest('oil')"   class="bg-gray-600/30 border border-gray-500/50 text-gray-300 rounded px-2 py-1.5 hover:bg-gray-600/50 transition active:scale-95">🛢️ 石油 -30萬</button>
-          <button onclick="invest('nuclear')" class="bg-purple-600/30 border border-purple-500/50 text-purple-300 rounded px-2 py-1.5 hover:bg-purple-600/50 transition active:scale-95">⚛️ 核能 -30萬</button>
-          <button onclick="invest('wind')" class="bg-cyan-600/30 border border-cyan-500/50 text-cyan-300 rounded px-2 py-1.5 hover:bg-cyan-600/50 transition active:scale-95">💨 風能 -30萬</button>
-          <button onclick="openBuyModal()" class="bg-emerald-600/30 border border-emerald-500/50 text-emerald-300 rounded px-2 py-1.5 hover:bg-emerald-600/50 transition active:scale-95">📈 買股票</button>
-          <button onclick="openSellModal()" class="bg-orange-600/30 border border-orange-500/50 text-orange-300 rounded px-2 py-1.5 hover:bg-orange-600/50 transition active:scale-95">📉 賣股票</button>
-          <button onclick="nextTurn()" class="bg-red-600/30 border border-red-500/50 text-red-300 rounded px-2 py-1.5 hover:bg-red-600/50 transition active:scale-95 col-span-2">⏭️ 下一回合</button>
-          <button onclick="settle()" class="bg-indigo-600/30 border border-indigo-500/50 text-indigo-200 rounded px-2 py-1.5 hover:bg-indigo-600/50 transition active:scale-95 col-span-2">📊 結算</button>
-          <button onclick="resetGame()" class="bg-slate-600/30 border border-slate-500/50 text-slate-300 rounded px-2 py-1.5 hover:bg-slate-600/50 transition active:scale-95 col-span-2 text-xs">🔄 重新開始（清除存檔）</button>
+    <footer class="relative z-10 w-full grid grid-cols-1 lg:grid-cols-12 gap-4 shrink-0 pointer-events-none">
+      <div class="hud-panel pointer-events-auto lg:col-span-7 rounded-xl p-4 flex flex-col h-56 md:h-64">
+        <div class="flex justify-between items-center mb-2 shrink-0">
+          <div class="flex items-center gap-2">
+            <i data-lucide="trending-up" class="w-4 h-4 text-emerald-400"></i>
+            <h3 class="font-['Orbitron'] text-xs font-bold uppercase tracking-wider text-slate-300">Global Energy Stocks</h3>
+          </div>
+          <span id="api-status" class="text-[10px] font-['Orbitron'] text-slate-500 uppercase tracking-widest">Connecting API...</span>
+        </div>
+        
+        <div class="flex-grow overflow-y-auto pr-1">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="border-b border-emerald-500/10 text-slate-400 font-medium">
+                <th class="py-1.5 font-normal">Symbol</th>
+                <th class="py-1.5 font-normal">Price</th>
+                <th class="py-1.5 font-normal">Chg</th>
+                <th class="py-1.5 font-normal text-right">Owned</th>
+                <th class="py-1.5 font-normal text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody id="stock-list" class="divide-y divide-emerald-500/5 font-['Orbitron']"></tbody>
+          </table>
         </div>
       </div>
 
-      <!-- Event Log -->
-      <div class="panel rounded-lg p-2 sm:p-4 slide-up" style="animation-delay:0.3s;">
-        <h2 class="text-emerald-400 font-bold mb-2 flex items-center gap-1 text-xs sm:text-sm" style="font-family:'Orbitron',monospace;">
-          <i data-lucide="newspaper" style="width:14px;height:14px;"></i> 事件紀錄
-        </h2>
-        <div id="event-log" class="text-xs text-emerald-200/70 space-y-1 max-h-24 overflow-y-auto"></div>
+      <div class="hud-panel pointer-events-auto lg:col-span-5 rounded-xl p-4 flex flex-col justify-between h-56 md:h-64">
+        <div class="flex-grow flex flex-col overflow-hidden mb-3">
+          <div class="flex items-center gap-2 mb-2 shrink-0">
+            <i data-lucide="terminal" class="w-4 h-4 text-emerald-400"></i>
+            <h3 class="font-['Orbitron'] text-xs font-bold uppercase tracking-wider text-slate-300">Empire Log</h3>
+          </div>
+          <div id="log-content" class="flex-grow overflow-y-auto text-[11px] text-slate-400 space-y-1.5 pr-1 font-mono leading-relaxed select-text"></div>
+        </div>
+
+        <div class="flex items-center gap-3 shrink-0">
+          <button onclick="nextTurn()" class="flex-grow bg-emerald-500 hover:bg-emerald-400 text-[#02040a] font-['Orbitron'] font-black tracking-widest py-2.5 px-4 rounded-lg text-xs transition-all active:scale-[0.98] shadow-[0_0_15px_rgba(16,185,129,0.3)] flex justify-center items-center gap-2">
+            NEXT TURN <i data-lucide="chevron-right" class="w-4 h-4 stroke-[3]"></i>
+          </button>
+          
+          <button onclick="toggleMusic(this)" class="hud-panel border border-emerald-500/20 hover:bg-emerald-500/10 p-2.5 rounded-lg transition-all active:scale-95 flex justify-center items-center" title="切換背景音樂">
+            <i data-lucide="volume-x" class="w-4 h-4 text-slate-400"></i>
+          </button>
+        </div>
       </div>
+    </footer>
 
-    </aside>
-  </div>
-</div>
-
-<!-- Buy Modal -->
-<div id="buy-modal" class="modal-overlay hidden">
-  <div class="modal-box">
-    <h3 class="text-emerald-400 font-bold mb-3" style="font-family:'Orbitron',monospace;">📈 買入股票</h3>
-    <label>選擇股票</label>
-    <select id="buy-ticker"></select>
-    <label>數量（股）</label>
-    <input type="number" id="buy-qty" min="1" value="1" placeholder="輸入數量">
-    <div id="buy-cost" class="text-xs mt-2 text-emerald-300/70"></div>
-    <div class="flex gap-2 mt-4">
-      <button class="btn-green" onclick="confirmBuy()">確認買入</button>
-      <button class="btn-gray" onclick="closeModal('buy-modal')">取消</button>
+    <div id="trade-modal" class="fixed inset-0 bg-[#02040a]/80 backdrop-filter blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300 p-4">
+      <div class="hud-panel rounded-2xl p-5 w-80 max-w-full transform scale-95 transition-all duration-300 shadow-2xl">
+        <div class="flex justify-between items-center mb-4 border-b border-emerald-500/20 pb-2">
+          <h3 id="modal-title" class="text-emerald-400 font-bold font-['Orbitron'] tracking-wide">STOCK TRADE</h3>
+          <button onclick="closeTradeModal()" class="text-slate-400 hover:text-slate-200 transition-colors"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+        <div class="space-y-3 text-xs">
+          <div class="flex justify-between font-['Orbitron']"><span class="text-slate-400">現價 Price:</span><span id="modal-price" class="text-emerald-400 font-bold">--</span></div>
+          <div class="flex justify-between font-['Orbitron']"><span class="text-slate-400">可用資金 Funds:</span><span id="modal-funds" class="text-slate-300">--</span></div>
+          <div class="flex justify-between font-['Orbitron']"><span class="text-slate-400">目前持股 Position:</span><span id="modal-owned" class="text-slate-300">--</span></div>
+          <div class="flex flex-col gap-1.5 pt-2">
+            <label class="text-slate-400 text-[11px]">輸入交易股數 Quantity:</label>
+            <input id="trade-qty" type="number" min="1" value="10" class="bg-[#050914] border border-emerald-500/30 rounded-lg py-2 px-3 text-emerald-400 font-bold font-['Orbitron'] focus:outline-none focus:border-emerald-500/60 text-sm">
+          </div>
+        </div>
+        <div class="mt-5 flex gap-3">
+          <button onclick="confirmBuy()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-[#02040a] font-bold py-2 rounded-lg text-xs transition-all active:scale-95">買入 BUY</button>
+          <button onclick="confirmSell()" class="flex-1 bg-rose-600/20 hover:bg-rose-600/40 border border-rose-500/40 text-rose-300 font-bold py-2 rounded-lg text-xs transition-all active:scale-95">賣出 SELL</button>
+        </div>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- Sell Modal -->
-<div id="sell-modal" class="modal-overlay hidden">
-  <div class="modal-box">
-    <h3 class="text-emerald-400 font-bold mb-3" style="font-family:'Orbitron',monospace;">📉 賣出股票</h3>
-    <label>選擇持倉</label>
-    <select id="sell-ticker"></select>
-    <label>數量（股）</label>
-    <input type="number" id="sell-qty" min="1" value="1" placeholder="輸入數量">
-    <div id="sell-info" class="text-xs mt-2 text-emerald-300/70"></div>
-    <div class="flex gap-2 mt-4">
-      <button class="btn-red" onclick="confirmSell()">確認賣出</button>
-      <button class="btn-gray" onclick="closeModal('sell-modal')">取消</button>
-    </div>
-  </div>
-</div>
+  <audio id="bgm1" src="./audio/bgm.mp3" preload="auto"></audio>
+  <audio id="bgm2" src="./audio/bgm2.mp3" preload="auto"></audio>
 
-<!-- Settle Modal -->
-<div id="settle-modal" class="modal-overlay hidden">
-  <div class="modal-box">
-    <h3 class="text-emerald-400 font-bold mb-3" style="font-family:'Orbitron',monospace;">📊 投資結算</h3>
-    <div id="settle-content" class="text-sm text-emerald-200 space-y-1"></div>
-    <div class="flex gap-2 mt-4">
-      <button class="btn-gray" onclick="closeModal('settle-modal')">關閉</button>
-    </div>
-  </div>
-</div>
+  <script>
+    // ═══════════════════════════════════════════════
+    // 遊戲核心狀態與初始化
+    // ═══════════════════════════════════════════════
+    const state = {
+      turn: 1,
+      funds: 1000000,
+      selectedCountry: null,
+      selectedStock: null,
+      countries: [
+        { id: 'tw', name: '台灣 Taiwan', lat: 23.7, lon: 121.0, economy: '高科技樞紐', solar: 12, oil: 40, coal: 38, nuclear: 10, wind: 0 },
+        { id: 'us', name: '美國 USA', lat: 37.0, lon: -95.7, economy: '超級大國', solar: 8, oil: 35, coal: 22, nuclear: 19, wind: 16 },
+        { id: 'cn', name: '中國 China', lat: 35.8, lon: 104.1, economy: '製造業巨頭', solar: 10, oil: 18, coal: 56, nuclear: 5, wind: 11 },
+        { id: 'eu', name: '歐洲聯盟 EU', lat: 48.5, lon: 9.1, economy: '綠能領航者', solar: 22, oil: 12, coal: 14, nuclear: 24, wind: 28 }
+      ],
+      stocks: [
+        { symbol: 'XOM', name: 'Exxon Mobil', price: 118.5, chg: 0, owned: 0, avgCost: 0 },
+        { symbol: 'NEE', name: 'NextEra Energy', price: 72.3, chg: 0, owned: 0, avgCost: 0 },
+        { symbol: '601857.SS', name: 'PetroChina', price: 10.2, chg: 0, owned: 0, avgCost: 0 },
+        { symbol: '300750.SZ', name: 'CATL', price: 255.0, chg: 0, owned: 0, avgCost: 0 },
+        { symbol: 'ORSTED.CO', name: 'Ørsted', price: 415.0, chg: 0, owned: 0, avgCost: 0 }
+      ],
+      log: ['[SYSTEM] 能源戰略系統已啟動。', '[INFO] 點擊 3D 地球上的綠點可查看該區域能源結構並投資綠能。']
+    };
 
-<!-- 背景音樂：自備音檔（請把 bgm.mp3 放到 repo 根目錄，與 index.html 同層） -->
-<audio id="bgm" src="bgm.mp3" loop preload="auto"></audio>
+    // ═══════════════════════════════════════════════
+    // 3D Canvas 地球儀渲染引擎
+    // ═══════════════════════════════════════════════
+    const canvas = document.getElementById('globe');
+    const ctxCanvas = canvas.getContext('2d');
+    let globeRadius = 200;
+    let rotX = 0.3, rotY = 0;
+    let autoRotate = true;
+    let isDragging = false;
+    let lastX = 0, lastY = 0;
 
-<!-- 背景音樂開關（右下角浮動） -->
-<button id="music-btn" onclick="toggleMusic(this)" title="背景音樂 開/關"
-  class="fixed bottom-3 right-3 z-50 w-11 h-11 rounded-full flex items-center justify-center text-lg bg-slate-800/80 border border-emerald-500/40 text-emerald-300 shadow-lg hover:bg-slate-700/80 transition active:scale-95">🔈</button>
-
-<script>
-// ═══════════════════════════════════════════════
-// 金鑰已移到後端（Azure 環境變數 FINNHUB_KEY）
-// 前端只打同源的 /api/quote，原始碼裡不再有任何 key
-// ═══════════════════════════════════════════════
-
-// ─── Game State ───────────────────────────────────────────────
-const state = {
-  turn: 1,
-  cash: 10000000,
-  energyInvested: 0,
-  energy: { solar: 15, oil: 35, coal: 25, nuclear: 15, wind: 10 },
-  stocks: [
-    { ticker: 'XOM',    name: 'ExxonMobil', price: 105, type: 'oil',     real: true, src: 'finnhub', cur: '$',  curCode: 'USD' },
-    { ticker: 'NEE',    name: 'NextEra',    price: 75,  type: 'solar',   real: true, src: 'finnhub', cur: '$',  curCode: 'USD' },
-    { ticker: 'ORSTED', name: 'Ørsted',     price: 50,  type: 'wind',    real: true, src: 'yahoo', ysym: 'ORSTED.CO', cur: 'kr', curCode: 'DKK' },
-    { ticker: 'CCJ',    name: 'Cameco',     price: 42,  type: 'nuclear', real: true, src: 'finnhub', cur: '$',  curCode: 'USD' },
-    { ticker: '601857', name: '中國石油',   price: 12,  type: 'oil',     real: true, src: 'yahoo', ysym: '601857.SS', cur: '¥', curCode: 'CNY' },
-    { ticker: '600688', name: '上海石化',   price: 8.5, type: 'oil',     real: true, src: 'yahoo', ysym: '600688.SS', cur: '¥', curCode: 'CNY' },
-    { ticker: '600905', name: '三峽能源',   price: 28,  type: 'wind',    real: true, src: 'yahoo', ysym: '600905.SS', cur: '¥', curCode: 'CNY' },
-    { ticker: '300750', name: '寧德時代',   price: 180, type: 'solar',   real: true, src: 'yahoo', ysym: '300750.SZ', cur: '¥', curCode: 'CNY' }
-  ],
-  // CRUD: 持倉紀錄 { ticker, name, qty, avgCost }
-  portfolio: [],
-  countries: [
-    { name: '台灣',   lat: 23.5, lon: 121,  economy: 100, solar: 15, coal: 30, nuclear: 20 },
-    { name: 'USA',    lat: 38,   lon: -97,   economy: 500, solar: 25, oil: 40, gas: 35 },
-    { name: '德國',   lat: 51,   lon: 10,    economy: 300, wind: 35, solar: 20, coal: 25 },
-    { name: '沙烏地', lat: 24,   lon: 45,    economy: 250, oil: 80, solar: 10 },
-    { name: '日本',   lat: 36,   lon: 138,   economy: 350, nuclear: 20, solar: 15, coal: 30 },
-    { name: '中國',   lat: 35,   lon: 105,   economy: 600, coal: 50, solar: 15, wind: 10 }
-  ],
-  randomEvents: [
-    { name: '中東衝突爆發',   effect: 'oil',    delta: +8 },
-    { name: '颱風侵襲',       effect: 'solar',  delta: -5 },
-    { name: '再生能源補助通過', effect: 'solar', delta: +5 },
-    { name: '核電廠事故',     effect: 'nuclear', delta: -8 },
-    { name: '碳稅加重',       effect: 'coal',   delta: -6 },
-    { name: '風電技術突破',   effect: 'wind',   delta: +6 }
-  ],
-  log: [],
-  apiStatus: 'loading' // 'loading' | 'ok' | 'fail'
-};
-
-// ─── API Fetch 工具函式 ───────────────────────────────────────
-// 多個 CORS Proxy，依序嘗試
-const PROXIES = [
-  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-  url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-  url => `https://thingproxy.freeboard.io/fetch/${url}`
-];
-
-async function fetchViaProxy(url, timeout = 8000) {
-  for (const makeProxy of PROXIES) {
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeout);
-    try {
-      const res = await fetch(makeProxy(url), { signal: controller.signal });
-      clearTimeout(id);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const text = await res.text();
-      if (text.includes('Host not in allowlist') || text.trim() === '') throw new Error('blocked');
-      return JSON.parse(text);
-    } catch (e) {
-      clearTimeout(id);
-      // 這個 proxy 失敗，試下一個
-    }
-  }
-  throw new Error('所有 Proxy 均失敗');
-}
-
-async function fetchDirect(url, timeout = 8000) {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeout);
-  try {
-    const res = await fetch(url, { signal: controller.signal });
-    clearTimeout(id);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
-  } catch (e) {
-    clearTimeout(id);
-    throw e;
-  }
-}
-
-// 匯率：open.er-api.com 免費、免 key、原生支援 CORS。以 USD 為基準。
-async function fetchFxRates() {
-  try {
-    const data = await fetchDirect('https://open.er-api.com/v6/latest/USD');
-    if (data && data.rates && data.rates.TWD) {
-      state.fxRates = data.rates;   // rates.TWD / rates.DKK / rates.CNY = 每 1 USD = ? 該幣別
-      addLog('✓ 匯率已更新');
-      return true;
-    }
-  } catch (e) {
-    addLog('⚠ 匯率取得失敗');
-  }
-  return false;
-}
-
-// 把某幣別價格換算成台幣：TWD/該幣 = (TWD per USD) / (該幣 per USD)
-function toTWD(price, curCode) {
-  const r = state.fxRates;
-  if (!r || !r.TWD || !r[curCode]) return null;
-  return price * (r.TWD / r[curCode]);
-}
-
-// ─── 台幣經濟相關 ─────────────────────────────────────────────
-const START_CAPITAL = 10000000;                      // 起始資金 NT$10,000,000
-const RENEWABLE_BONUS = 600000;                      // 再生能源每回合收入加成係數（再生占比 × 此值）
-function stockTWD(s) { return toTWD(s.price, s.curCode); }   // 該股現價(台幣/股)
-function fmtNT(n) { return 'NT$' + Math.round(n).toLocaleString(); }
-
-// 總資產淨值 = 現金 + 所有持股的台幣市值
-function netWorth() {
-  let holdings = 0;
-  for (const p of state.portfolio) {
-    const s = state.stocks.find(x => x.ticker === p.ticker);
-    const tw = s ? stockTWD(s) : null;
-    holdings += (tw != null ? tw : p.avgCost) * p.qty;   // avgCost 已是台幣
-  }
-  return state.cash + holdings;
-}
-
-// 結算：彈出總結畫面
-function settle() {
-  const nw = netWorth();
-  const ret = (nw - START_CAPITAL) / START_CAPITAL * 100;
-  let best = null, worst = null;
-  for (const p of state.portfolio) {
-    const s = state.stocks.find(x => x.ticker === p.ticker);
-    const tw = s ? stockTWD(s) : p.avgCost;
-    const pct = (tw - p.avgCost) / p.avgCost * 100;
-    if (best === null || pct > best.pct) best = { ticker: p.ticker, pct };
-    if (worst === null || pct < worst.pct) worst = { ticker: p.ticker, pct };
-  }
-  let rank;
-  if (ret >= 30) rank = '🏆 能源大亨';
-  else if (ret >= 10) rank = '🌟 精明投資人';
-  else if (ret >= 0) rank = '🙂 穩健保本';
-  else if (ret >= -15) rank = '😐 小幅虧損';
-  else rank = '💸 再接再厲';
-
-  const fmtPct = v => (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
-  let html = '';
-  html += `<div class="text-emerald-400/70">第 ${state.turn} 回合結算</div>`;
-  html += `<div style="height:6px"></div>`;
-  html += `<div>起始資金：${fmtNT(START_CAPITAL)}</div>`;
-  html += `<div>現金：${fmtNT(state.cash)}</div>`;
-  html += `<div>持股市值：${fmtNT(nw - state.cash)}</div>`;
-  html += `<div class="font-bold text-emerald-300">總資產淨值：${fmtNT(nw)}</div>`;
-  html += `<div style="height:6px"></div>`;
-  html += `<div class="font-bold ${ret>=0?'text-emerald-400':'text-red-400'}">總報酬率：${fmtPct(ret)}</div>`;
-  if (best) html += `<div>最賺持股：${best.ticker} (${fmtPct(best.pct)})</div>`;
-  if (worst && state.portfolio.length > 1) html += `<div>最賠持股：${worst.ticker} (${fmtPct(worst.pct)})</div>`;
-  html += `<div style="height:6px"></div>`;
-  html += `<div class="text-base font-bold">評等：${rank}</div>`;
-
-  document.getElementById('settle-content').innerHTML = html;
-  document.getElementById('settle-modal').classList.remove('hidden');
-}
-
-function setDashboard(id, text, ok = true) {
-  const el = document.getElementById(id);
-  if (el) {
-    el.textContent = text;
-    el.style.opacity = ok ? '1' : '0.45';
-  }
-}
-
-// ① Open-Meteo 太陽輻射 + 風速（台灣台北，完全免費無需 key，原生支援 CORS）
-async function fetchTaiwanPower() {
-  try {
-    // Open-Meteo：台灣當前太陽輻射(W/m²) & 風速(km/h)
-    const data = await fetchDirect(
-      'https://api.open-meteo.com/v1/forecast?latitude=25.04&longitude=121.53&current=shortwave_radiation,wind_speed_10m,temperature_2m&timezone=Asia%2FTaipei'
-    );
-    if (data?.current) {
-      const radiation = data.current.shortwave_radiation ?? 0;  // W/m²
-      const windSpeed = data.current.wind_speed_10m ?? 0;        // km/h
-      const temp      = data.current.temperature_2m ?? 0;
-
-      // 轉換成遊戲用數字（模擬發電量）
-      const solarEst = Math.round(radiation * 0.15); // 粗估 MW（依輻射）
-      const windEst  = Math.round(windSpeed * 12);   // 粗估 MW（依風速）
-
-      setDashboard('rt-solar', `☀️ ${radiation} W/m²（約${solarEst}MW）`);
-      setDashboard('rt-power', `🌡️ ${temp}°C 風${windSpeed}km/h`);
-
-      // 更新遊戲能源佔比
-      if (radiation > 300) state.energy.solar = Math.min(40, state.energy.solar + 1);
-      if (windSpeed > 20)  state.energy.wind  = Math.min(30, state.energy.wind + 1);
-
-      addLog(`✓ 台灣即時天氣：太陽輻射${radiation}W/m²，風速${windSpeed}km/h`);
-      return true;
-    }
-  } catch (e) {
-    setDashboard('rt-solar', '無法連線 --', false);
-    setDashboard('rt-power', '無法連線 --', false);
-    addLog('⚠ Open-Meteo API 暫時無法連線');
-  }
-  return false;
-}
-
-// ② 油價：使用匯率推算，但不覆蓋 Finnhub 已更新的真實股價
-async function fetchOilPrice() {
-  // 方法一：用 exchangerate.host 免費匯率API（無需key，原生CORS）
-  try {
-    const data = await fetchDirect(
-      'https://open.er-api.com/v6/latest/USD'
-    );
-    if (data?.rates) {
-      const twd = data.rates.TWD || 32;
-      const baseOil = 78 + (twd - 30) * 1.2;
-      const oil = Math.max(55, Math.min(120, baseOil));
-      // 只更新儀表板油價顯示，不動 XOM 股價（由 Finnhub 負責）
-      setDashboard('rt-oil', `$${oil.toFixed(2)}/桶 (匯率推算)`);
-      addLog(`✓ 油價推算: $${oil.toFixed(1)}/桶（USD/TWD=${twd.toFixed(2)}）`);
-      return true;
-    }
-  } catch (e) {
-    // 方法一失敗，試方法二
-  }
-
-  // 方法二：CoinGecko 免費API（無需key，原生CORS）
-  try {
-    const data = await fetchDirect(
-      'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd'
-    );
-    if (data?.bitcoin?.usd) {
-      const btc = data.bitcoin.usd;
-      const oil = Math.max(55, Math.min(120, 70 + (btc / 100000) * 30));
-      // 同樣只更新儀表板，不動 XOM 股價
-      setDashboard('rt-oil', `$${oil.toFixed(2)}/桶 (市場推算)`);
-      addLog(`✓ 油價市場推算: $${oil.toFixed(1)}/桶`);
-      return true;
-    }
-  } catch (e) {
-    // 兩個都失敗
-  }
-
-  setDashboard('rt-oil', '無法連線 --', false);
-  addLog('⚠ 油價API均失敗');
-  return false;
-}
-
-// ③ Open-Meteo 空氣品質（PM2.5，台灣，完全免費原生CORS）
-async function fetchAQI() {
-  try {
-    const data = await fetchDirect(
-      'https://air-quality-api.open-meteo.com/v1/air-quality?latitude=25.04&longitude=121.53&current=pm2_5,pm10,carbon_monoxide&timezone=Asia%2FTaipei'
-    );
-    if (data?.current) {
-      const pm25 = data.current.pm2_5 ?? 0;
-      const pm10 = data.current.pm10  ?? 0;
-      // 換算成 AQI 近似值
-      const aqi = Math.round(pm25 * 4.5);
-      const aqiLabel = aqi <= 50  ? '良好🟢'
-                     : aqi <= 100 ? '普通🟡'
-                     : aqi <= 150 ? '敏感不良🟠'
-                     : '不良🔴';
-      setDashboard('rt-aqi', `PM2.5: ${pm25.toFixed(1)} μg/m³ ${aqiLabel}`);
-
-      // 遊戲連動：PM2.5 高 → 煤炭受懲罰
-      if (pm25 > 25 && state.energy.coal > 10) {
-        state.energy.coal = Math.max(5, state.energy.coal - 1);
-        addLog(`⚠ 空汙警示！PM2.5=${pm25.toFixed(1)}，煤炭佔比下調`);
+    // 世界陸地極簡粗略經緯度矩陣（維持高科技點陣氛圍）
+    const landPoints = [];
+    for (let lat = -60; lat <= 70; lat += 4) {
+      for (let lon = -180; lon <= 180; lon += 4) {
+        let isLand = false;
+        // 北美
+        if (lat > 15 && lat < 70 && lon > -160 && lon < -50) isLand = true;
+        // 南美
+        if (lat > -55 && lat <= 12 && lon > -80 && lon < -35) isLand = true;
+        // 歐亞大陸
+        if (lat > 10 && lat < 75 && lon > -10 && lon < 170) {
+          isLand = true;
+          if (lat > 10 && lat < 30 && lon > 40 && lon < 60) isLand = true; // 中東
+          if (lat > 5 && lat < 25 && lon > 70 && lon < 90) isLand = true;  // 印度
+        }
+        // 非洲
+        if (lat > -35 && lat <= 35 && lon > -15 && lon < 50) {
+          if (!(lat > 10 && lon > 35)) isLand = true;
+        }
+        // 澳洲
+        if (lat > -40 && lat < -10 && lon > 110 && lon < 155) isLand = true;
+        
+        if (isLand && Math.random() > 0.15) {
+          landPoints.push({ lat, lon });
+        }
       }
-      addLog(`✓ 台灣PM2.5: ${pm25.toFixed(1)} μg/m³`);
-      return true;
     }
-  } catch (e) {
-    setDashboard('rt-aqi', '無法連線 --', false);
-    addLog('⚠ 空氣品質API暫時無法連線');
-  }
-  return false;
-}
 
-// ④ (已移除) 世界銀行碳排/台灣用電：World Bank API 在瀏覽器端 CORS 受限，且資料庫無台灣資料，故移除此兩項
-
-// ⑤ Finnhub 真實美股股價
-// 抓單一支報價：先試主要來源，Finnhub 失敗時自動改用 Yahoo 後備（同代號美股）
-async function fetchQuote(stock) {
-  const primary = stock.src === 'yahoo'
-    ? `/api/quote-intl?symbol=${encodeURIComponent(stock.ysym)}`
-    : `/api/quote?symbol=${encodeURIComponent(stock.ticker)}`;
-
-  // 1) 主要來源
-  try {
-    const data = await fetchDirect(primary);
-    if (data && typeof data.c === 'number' && data.c > 0) return { data, via: 'primary' };
-  } catch (e) { /* 落到後備 */ }
-
-  // 2) 後備：Finnhub 來源失敗時，改用 Yahoo 抓同一支（美股代號相同、同為美元）
-  if (stock.src !== 'yahoo') {
-    try {
-      const data = await fetchDirect(`/api/quote-intl?symbol=${encodeURIComponent(stock.ticker)}`);
-      if (data && typeof data.c === 'number' && data.c > 0) return { data, via: 'fallback' };
-    } catch (e) { /* 主來源與後備皆失敗 */ }
-  }
-  return null;
-}
-
-async function fetchRealStocks() {
-  const realStocks = state.stocks.filter(s => s.real);
-  let successCount = 0;
-  for (const stock of realStocks) {
-    const result = await fetchQuote(stock);
-    if (result) {
-      const data = result.data;
-      stock.price     = parseFloat(data.c.toFixed(2));
-      stock.prevClose = data.pc || stock.price;
-      const change = data.pc ? ((data.c - data.pc) / data.pc * 100).toFixed(2) : '0.00';
-      const tag = result.via === 'fallback' ? ' [Yahoo備援]' : '';
-      addLog(`✓ ${stock.ticker}: $${stock.price} (${parseFloat(change) >= 0 ? '+' : ''}${change}%)${tag}`);
-      successCount++;
-    } else {
-      addLog(`⚠ ${stock.ticker} 股價取得失敗（主來源與後備皆無回應）`);
+    function resizeCanvas() {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = canvas.parentElement.clientWidth * dpr;
+      canvas.height = canvas.parentElement.clientHeight * dpr;
+      ctxCanvas.scale(dpr, dpr);
+      globeRadius = Math.min(canvas.parentElement.clientWidth, canvas.parentElement.clientHeight) * 0.38;
+      if (globeRadius < 120) globeRadius = 120;
     }
-    await new Promise(r => setTimeout(r, 300));
-  }
-  // 無論成功幾支都強制更新畫面
-  render();
-  if (successCount > 0) {
-    addLog(`✓ 真實股價已更新 ${successCount}/${realStocks.length} 支`);
-    return true;
-  }
-  return false;
-}
-async function initAPIs() {
-  updateApiDot('loading');
-  // 先跑其他 API（不會動到股價）
-  const results = await Promise.allSettled([
-    fetchTaiwanPower(),
-    fetchOilPrice(),
-    fetchAQI(),
-    fetchFxRates()
-  ]);
-  // Finnhub 最後跑，確保真實股價不被覆蓋
-  await fetchRealStocks();
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
 
-  const anyOk = results.some(r => r.value === true);
-  state.apiStatus = anyOk ? 'ok' : 'fail';
-  updateApiDot(state.apiStatus);
-  render();
+    // 3D 投影核心演算法
+    function project(lat, lon) {
+      let radLat = lat * Math.PI / 180;
+      let radLon = lon * Math.PI / 180;
+      let x = globeRadius * Math.cos(radLat) * Math.sin(radLon);
+      let y = globeRadius * Math.sin(radLat);
+      let z = globeRadius * Math.cos(radLat) * Math.cos(radLon);
 
-  // 定期更新
-  setInterval(() => {
-    fetchTaiwanPower();
-    fetchOilPrice();
-    fetchAQI();
-    render();
-  }, 60000);
-  // 股價每5分鐘更新（Finnhub 免費版限速）
-  setInterval(() => { fetchRealStocks(); }, 300000);
-}
+      // 繞 Y 軸旋轉 (自轉)
+      let x1 = x * Math.cos(rotY) - z * Math.sin(rotY);
+      let z1 = x * Math.sin(rotY) + z * Math.cos(rotY);
+      // 繞 X 軸旋轉 (俯仰)
+      let y2 = y * Math.cos(rotX) - z1 * Math.sin(rotX);
+      let z2 = y * Math.sin(rotX) + z1 * Math.cos(rotX);
 
-function updateApiDot(status) {
-  const dot = document.querySelector('#api-status .api-dot');
-  if (!dot) return;
-  dot.className = 'api-dot ' + status;
-  document.getElementById('api-status').title =
-    status === 'ok' ? 'API 連線正常' :
-    status === 'fail' ? 'API 連線失敗，使用模擬數據' : 'API 連線中...';
-}
-
-// ─── CRUD：持倉管理 ───────────────────────────────────────────
-
-// CREATE：買入
-function openBuyModal() {
-  const sel = document.getElementById('buy-ticker');
-  sel.innerHTML = state.stocks.map(s => {
-    const tw = stockTWD(s);
-    const twStr = tw != null ? fmtNT(tw) : '—';
-    return `<option value="${s.ticker}">${s.ticker} - ${s.name}（${twStr}/股）</option>`;
-  }).join('');
-  document.getElementById('buy-qty').value = 1;
-  updateBuyCost();
-  document.getElementById('buy-modal').classList.remove('hidden');
-}
-
-function updateBuyCost() {
-  const ticker = document.getElementById('buy-ticker').value;
-  const qty = parseInt(document.getElementById('buy-qty').value) || 0;
-  const stock = state.stocks.find(s => s.ticker === ticker);
-  if (stock) {
-    const tw = stockTWD(stock);
-    if (tw == null) {
-      document.getElementById('buy-cost').textContent = '匯率載入中,請稍候…';
-      return;
+      return { x: x1, y: y2, z: z2 };
     }
-    const cost = tw * qty;
-    document.getElementById('buy-cost').textContent =
-      `預計花費：${fmtNT(cost)}　(現金：${fmtNT(state.cash)})`;
-  }
-}
-document.getElementById('buy-ticker').addEventListener('change', updateBuyCost);
-document.getElementById('buy-qty').addEventListener('input', updateBuyCost);
 
-function confirmBuy() {
-  const ticker = document.getElementById('buy-ticker').value;
-  const qty = parseInt(document.getElementById('buy-qty').value) || 0;
-  if (qty <= 0) return alert('請輸入有效數量');
-  const stock = state.stocks.find(s => s.ticker === ticker);
-  const priceTw = stockTWD(stock);
-  if (priceTw == null) return alert('匯率尚未載入,請稍候再試');
-  const cost = priceTw * qty;
-  if (cost > state.cash) return alert('資金不足！');
+    // 繪製與動畫渲染循環
+    function drawGlobe() {
+      const W = canvas.width / (window.devicePixelRatio || 1);
+      const H = canvas.height / (window.devicePixelRatio || 1);
+      const cx = W / 2, cy = H / 2;
 
-  state.cash = Math.round(state.cash - cost);
-  // 找既有持倉或新增（avgCost 以台幣計）
-  let holding = state.portfolio.find(p => p.ticker === ticker);
-  if (holding) {
-    // UPDATE avgCost
-    const totalCost = holding.avgCost * holding.qty + priceTw * qty;
-    holding.qty += qty;
-    holding.avgCost = totalCost / holding.qty;
-  } else {
-    // CREATE
-    state.portfolio.push({ ticker, name: stock.name, qty, avgCost: priceTw });
-  }
-  addLog(`買入 ${ticker} x${qty} @${fmtNT(priceTw)} (-${fmtNT(cost)})`);
-  closeModal('buy-modal');
-  render();
-}
+      ctxCanvas.clearRect(0, 0, W, H);
 
-// READ：顯示持倉（renderPortfolio 中處理）
+      // 1. 繪製地球背景氛圍大氣光暈
+      let glow = ctxCanvas.createRadialGradient(cx, cy, globeRadius * 0.8, cx, cy, globeRadius * 1.2);
+      glow.addColorStop(0, 'rgba(16, 185, 129, 0.04)');
+      glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctxCanvas.fillStyle = glow;
+      ctxCanvas.beginPath(); ctxCanvas.arc(cx, cy, globeRadius * 1.3, 0, Math.PI * 2); ctxCanvas.fill();
 
-// UPDATE + DELETE：賣出
-function openSellModal() {
-  if (state.portfolio.length === 0) return alert('你目前沒有持倉！');
-  const sel = document.getElementById('sell-ticker');
-  sel.innerHTML = state.portfolio.map(p => {
-    const stock = state.stocks.find(s => s.ticker === p.ticker);
-    const tw = stock ? stockTWD(stock) : null;
-    const currentPrice = (tw != null) ? tw : p.avgCost;
-    const pnl = ((currentPrice - p.avgCost) / p.avgCost * 100).toFixed(1);
-    return `<option value="${p.ticker}">${p.ticker} x${p.qty} (${pnl >= 0 ? '+' : ''}${pnl}%)</option>`;
-  }).join('');
-  document.getElementById('sell-qty').value = 1;
-  updateSellInfo();
-  document.getElementById('sell-modal').classList.remove('hidden');
-}
+      // 地球基底深色圓形
+      ctxCanvas.fillStyle = '#040814';
+      ctxCanvas.beginPath(); ctxCanvas.arc(cx, cy, globeRadius, 0, Math.PI * 2); ctxCanvas.fill();
+      ctxCanvas.strokeStyle = 'rgba(16, 185, 129, 0.1)';
+      ctxCanvas.lineWidth = 1;
+      ctxCanvas.stroke();
 
-function updateSellInfo() {
-  const ticker = document.getElementById('sell-ticker').value;
-  const qty = parseInt(document.getElementById('sell-qty').value) || 0;
-  const holding = state.portfolio.find(p => p.ticker === ticker);
-  const stock = state.stocks.find(s => s.ticker === ticker);
-  if (holding && stock) {
-    const tw = stockTWD(stock);
-    const cur = (tw != null) ? tw : holding.avgCost;
-    const revenue = cur * qty;
-    const pnl = (cur - holding.avgCost) * qty;
-    document.getElementById('sell-info').textContent =
-      `持有：${holding.qty}股　預計收回：${fmtNT(revenue)}　損益：${pnl >= 0 ? '+' : ''}${fmtNT(pnl)}`;
-  }
-}
-document.getElementById('sell-ticker').addEventListener('change', updateSellInfo);
-document.getElementById('sell-qty').addEventListener('input', updateSellInfo);
+      // 2. 繪製低解析點陣陸地
+      ctxCanvas.fillStyle = 'rgba(16, 185, 129, 0.25)';
+      landPoints.forEach(pt => {
+        let p = project(pt.lat, pt.lon);
+        if (p.z > 0) { // 背面隱藏
+          let size = (p.z / globeRadius) * 1.5 + 0.5;
+          ctxCanvas.beginPath();
+          ctxCanvas.arc(cx + p.x, cy - p.y, size, 0, Math.PI * 2);
+          ctxCanvas.fill();
+        }
+      });
 
-function confirmSell() {
-  const ticker = document.getElementById('sell-ticker').value;
-  const qty = parseInt(document.getElementById('sell-qty').value) || 0;
-  if (qty <= 0) return alert('請輸入有效數量');
-  const holding = state.portfolio.find(p => p.ticker === ticker);
-  if (!holding) return alert('找不到持倉');
-  if (qty > holding.qty) return alert(`持有數量不足（僅有 ${holding.qty} 股）`);
+      // 3. 繪製主要國家互動核心節點
+      state.countries.forEach(c => {
+        let p = project(c.lat, c.lon);
+        if (p.z > 0) {
+          let isSelected = state.selectedCountry && state.selectedCountry.id === c.id;
+          
+          // 外圍波紋動畫
+          let pulse = (Date.now() % 1500) / 1500;
+          ctxCanvas.strokeStyle = isSelected ? `rgba(52, 211, 153, ${1 - pulse})` : `rgba(16, 185, 129, ${0.6 * (1 - pulse)})`;
+          ctxCanvas.lineWidth = 1.5;
+          ctxCanvas.beginPath();
+          ctxCanvas.arc(cx + p.x, cy - p.y, 4 + pulse * 12, 0, Math.PI * 2);
+          ctxCanvas.stroke();
 
-  const stock = state.stocks.find(s => s.ticker === ticker);
-  const cur = stockTWD(stock);
-  const px = (cur != null) ? cur : holding.avgCost;
-  const revenue = px * qty;
-  const pnl = (px - holding.avgCost) * qty;
-  state.cash = Math.round(state.cash + revenue);
+          // 核心實心點
+          ctxCanvas.fillStyle = isSelected ? '#34d399' : '#10b981';
+          ctxCanvas.shadowBlur = isSelected ? 12 : 6;
+          ctxCanvas.shadowColor = '#10b981';
+          ctxCanvas.beginPath();
+          ctxCanvas.arc(cx + p.x, cy - p.y, isSelected ? 5 : 4, 0, Math.PI * 2);
+          ctxCanvas.fill();
+          ctxCanvas.shadowBlur = 0; // 重置陰影
 
-  if (qty === holding.qty) {
-    // DELETE：全部賣出，移除持倉
-    state.portfolio = state.portfolio.filter(p => p.ticker !== ticker);
-  } else {
-    // UPDATE：部分賣出
-    holding.qty -= qty;
-  }
-  addLog(`賣出 ${ticker} x${qty} @${fmtNT(px)} (+${fmtNT(revenue)}, 損益:${pnl >= 0 ? '+' : ''}${fmtNT(pnl)})`);
-  closeModal('sell-modal');
-  render();
-}
+          // 國家文字標籤
+          ctxCanvas.fillStyle = isSelected ? '#34d399' : 'rgba(255, 255, 255, 0.7)';
+          ctxCanvas.font = isSelected ? 'bold 11px Noto Sans TC' : '10px Noto Sans TC';
+          ctxCanvas.fillText(c.name.split(' ')[0], cx + p.x + 8, cy - p.y + 3);
+        }
+      });
 
-function closeModal(id) {
-  document.getElementById(id).classList.add('hidden');
-}
+      // 🛠️ 修正旋轉速度與物理自轉方向（改為 -= 0.001 慢速自西向東轉）
+      if (autoRotate && !isDragging) rotY -= 0.001; 
 
-// ─── Render ──────────────────────────────────────────────────
-function renderMarket() {
-  const colors = { solar:'yellow', oil:'gray', coal:'orange', nuclear:'purple', wind:'cyan' };
-  const icons  = { solar:'☀️', oil:'🛢️', coal:'⚫', nuclear:'⚛️', wind:'💨' };
-  const renew = (state.energy.solar || 0) + (state.energy.wind || 0);
-  const bonus = Math.round((renew / 100) * RENEWABLE_BONUS);
-  const invested = state.energyInvested || 0;
-  const payback = (invested > 0 && bonus > 0) ? Math.ceil(invested / bonus) : null;
-  document.getElementById('energy-market').innerHTML =
-    Object.entries(state.energy).map(([k,v]) =>
-      `<div class="flex justify-between items-center gap-1">
-        <span class="text-${colors[k]}-300 flex-shrink-0">${icons[k]} ${k}</span>
-        <div class="h-1.5 rounded bg-gray-700 overflow-hidden flex-1">
-          <div class="h-full bg-${colors[k]}-500 rounded" style="width:${v}%"></div>
-        </div>
-        <span class="text-${colors[k]}-200 w-8 text-right">${v}%</span>
-      </div>`
-    ).join('') +
-    `<div class="mt-1 pt-1 border-t border-emerald-500/20 text-xs space-y-0.5">
-      <div class="flex justify-between text-emerald-300 font-bold">
-        <span>🌱 再生能源占比</span><span>${renew}%</span>
-      </div>
-      <div class="flex justify-between text-emerald-400/70">
-        <span>綠能加成</span><span>約 ${fmtNT(bonus)}/回合</span>
-      </div>
-      <div class="flex justify-between text-amber-300/90">
-        <span>💰 累計投入能源</span><span>${fmtNT(invested)}</span>
-      </div>
-      <div class="flex justify-between text-amber-200/60">
-        <span>回本回合<span class="text-amber-200/40">(以目前加成計)</span></span>
-        <span>${payback != null ? '約 ' + payback + ' 回合' : '—'}</span>
-      </div>
-    </div>`;
-}
-
-function renderStocks() {
-  const header = `<div class="flex justify-between items-center gap-1 text-emerald-500/40 text-[10px] mb-0.5">
-    <span class="flex-shrink-0" style="width:50px">代號</span>
-    <span class="flex-1 truncate">名稱</span>
-    <span class="flex-shrink-0 text-right" style="min-width:58px">原幣價</span>
-    <span class="flex-shrink-0 text-right" style="min-width:72px">台幣價</span>
-  </div>`;
-  document.getElementById('stock-market').innerHTML = header +
-    state.stocks.map(s => {
-      const holding = state.portfolio.find(p => p.ticker === s.ticker);
-      const pnl = holding ? ((s.price - holding.avgCost) / holding.avgCost * 100).toFixed(1) : null;
-      const twd = toTWD(s.price, s.curCode);
-      const twdStr = (twd != null) ? `NT$${Math.round(twd).toLocaleString()}` : '—';
-      return `<div class="flex justify-between items-center text-emerald-200 gap-1">
-        <span class="font-mono flex-shrink-0 text-xs" style="width:50px">${s.ticker}</span>
-        <span class="text-emerald-400/60 text-xs flex-1 truncate">${s.name}</span>
-        <span class="font-bold text-xs flex-shrink-0 text-right" style="min-width:58px">${s.cur || '$'}${s.price.toFixed(1)}</span>
-        <span class="text-xs flex-shrink-0 text-right text-cyan-300/80" style="min-width:72px">${twdStr}</span>
-        ${pnl !== null ? `<span class="text-xs ${parseFloat(pnl)>=0?'text-emerald-400':'text-red-400'}">${pnl>=0?'+':''}${pnl}%</span>` : ''}
-      </div>`;
-    }).join('');
-}
-
-function renderPortfolio() {
-  const el = document.getElementById('portfolio');
-  if (state.portfolio.length === 0) {
-    el.innerHTML = '<div class="text-emerald-200/40">尚未持有任何股票</div>';
-    return;
-  }
-  let totalPnl = 0;
-  el.innerHTML = state.portfolio.map(p => {
-    const stock = state.stocks.find(s => s.ticker === p.ticker);
-    const tw = stock ? stockTWD(stock) : null;
-    const cur = (tw != null) ? tw : p.avgCost;
-    const pnl = (cur - p.avgCost) * p.qty;
-    totalPnl += pnl;
-    const pct = ((cur - p.avgCost) / p.avgCost * 100).toFixed(1);
-    return `<div class="portfolio-row">
-      <span class="font-mono text-emerald-300">${p.ticker}</span>
-      <span class="text-emerald-200/60">x${p.qty}</span>
-      <span class="text-emerald-200/60">成本 ${fmtNT(p.avgCost)}</span>
-      <span class="${pnl>=0?'text-emerald-400':'text-red-400'}">${pnl>=0?'+':''}${fmtNT(pnl)} (${pct}%)</span>
-    </div>`;
-  }).join('') +
-  `<div class="portfolio-row mt-1 border-t border-emerald-500/20 pt-1">
-    <span class="text-emerald-300 font-bold">總損益</span>
-    <span class="${totalPnl>=0?'text-emerald-400 font-bold':'text-red-400 font-bold'}">${totalPnl>=0?'+':''}${fmtNT(totalPnl)}</span>
-  </div>`;
-}
-
-function renderLog() {
-  document.getElementById('event-log').innerHTML =
-    state.log.slice(-8).reverse().map(e => `<div>⚡ ${e}</div>`).join('');
-}
-
-function updateHUD() {
-  document.getElementById('turn-num').textContent = state.turn;
-  document.getElementById('player-cash').textContent = state.cash.toLocaleString();
-  const nw = netWorth();
-  const nwEl = document.getElementById('net-worth');
-  if (nwEl) nwEl.textContent = Math.round(nw).toLocaleString();
-  const ret = (nw - START_CAPITAL) / START_CAPITAL * 100;
-  const retEl = document.getElementById('net-return');
-  if (retEl) {
-    retEl.textContent = `${ret >= 0 ? '+' : ''}${ret.toFixed(1)}%`;
-    retEl.className = ret >= 0 ? 'text-emerald-400' : 'text-red-400';
-  }
-}
-
-function addLog(msg) {
-  state.log.push(`[回合${state.turn}] ${msg}`);
-}
-
-// ─── 存檔（localStorage 持久化）─────────────────────────────
-const SAVE_KEY = 'energyEmpireSave_v1';
-function saveGame() {
-  try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify({
-      turn: state.turn, cash: state.cash, energyInvested: state.energyInvested,
-      energy: state.energy, portfolio: state.portfolio
-    }));
-  } catch (e) { /* 無痕模式或容量限制時略過 */ }
-}
-function loadGame() {
-  try {
-    const raw = localStorage.getItem(SAVE_KEY);
-    if (!raw) return false;
-    const s = JSON.parse(raw);
-    if (typeof s.cash === 'number') state.cash = s.cash;
-    if (typeof s.turn === 'number') state.turn = s.turn;
-    if (typeof s.energyInvested === 'number') state.energyInvested = s.energyInvested;
-    if (s.energy) state.energy = s.energy;
-    if (Array.isArray(s.portfolio)) state.portfolio = s.portfolio;
-    return true;
-  } catch (e) { return false; }
-}
-function resetGame() {
-  if (!confirm('確定要重新開始嗎？目前的資金、持倉與回合將被清除。')) return;
-  try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
-  location.reload();
-}
-
-function render() {
-  renderMarket();
-  renderStocks();
-  renderPortfolio();
-  renderLog();
-  updateHUD();
-  saveGame();   // 每次畫面更新後自動存檔
-}
-
-// ─── Game Actions ─────────────────────────────────────────────
-function invest(type) {
-  if (state.cash < 300000) { alert('資金不足！至少需要 NT$300,000'); return; }
-  state.cash -= 300000;
-  state.energyInvested += 300000;
-  state.energy[type] = Math.min(60, (state.energy[type] || 0) + 8);
-  // 重新正規化，保持總和 100
-  const total = Object.values(state.energy).reduce((a,b) => a+b, 0);
-  Object.keys(state.energy).forEach(k => state.energy[k] = Math.max(1, Math.round(state.energy[k] / total * 100)));
-  addLog(`投資 ${type} 能源 (-NT$300,000，佔比+8%)`);
-  render();
-}
-
-function nextTurn() {
-  state.turn++;
-  // 收入：根據再生能源佔比浮動
-  const renewableRatio = (state.energy.solar + state.energy.wind) / 100;
-  const income = Math.round(120000 + renewableRatio * RENEWABLE_BONUS + Math.random() * 80000);
-  state.cash += income;
-  addLog(`回合收入 +${fmtNT(income)}`);
-
-  // 股價隨機波動
-  state.stocks.forEach(s => {
-    s.price = Math.max(1, s.price * (0.93 + Math.random() * 0.16));
-  });
-
-  // 隨機事件（40% 機率）
-  if (Math.random() > 0.6) {
-    const ev = state.randomEvents[Math.floor(Math.random() * state.randomEvents.length)];
-    if (state.energy[ev.effect] !== undefined) {
-      state.energy[ev.effect] = Math.max(1, Math.min(70, state.energy[ev.effect] + ev.delta));
+      requestAnimationFrame(drawGlobe);
     }
-    addLog(`[事件] ${ev.name}`);
-  }
 
-  render();
-}
-
-// ─── 3D Globe ─────────────────────────────────────────────────
-const canvas = document.getElementById('globe');
-const ctx = canvas.getContext('2d', { alpha: true });
-
-function resizeCanvas() {
-  const parent = canvas.parentElement;
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width  = parent.clientWidth  * dpr;
-  canvas.height = parent.clientHeight * dpr;
-  ctx.scale(dpr, dpr);
-}
-
-let rotX = 0.3, rotY = 0, dragging = false, lastX = 0, lastY = 0, autoRotate = true;
-
-canvas.addEventListener('mousedown', e => { dragging = true; autoRotate = false; lastX = e.clientX; lastY = e.clientY; });
-canvas.addEventListener('mousemove', e => {
-  if (!dragging) return;
-  rotY += (e.clientX - lastX) * 0.005;
-  rotX  = Math.max(-1.5, Math.min(1.5, rotX + (e.clientY - lastY) * 0.005));
-  lastX = e.clientX; lastY = e.clientY;
-});
-canvas.addEventListener('mouseup',    () => { dragging = false; setTimeout(() => autoRotate = true, 3000); });
-canvas.addEventListener('mouseleave', () => { dragging = false; });
-canvas.addEventListener('touchstart', e => {
-  if (e.touches.length !== 1) return;
-  dragging = true; autoRotate = false;
-  lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
-}, { passive: true });
-canvas.addEventListener('touchmove', e => {
-  if (!dragging || e.touches.length !== 1) return;
-  rotY += (e.touches[0].clientX - lastX) * 0.008;
-  rotX  = Math.max(-1.5, Math.min(1.5, rotX + (e.touches[0].clientY - lastY) * 0.008));
-  lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
-}, { passive: true });
-canvas.addEventListener('touchend', () => { dragging = false; setTimeout(() => autoRotate = true, 3000); }, { passive: true });
-
-function project(lat, lon) {
-  const phi = (90 - lat) * Math.PI / 180;
-  const theta = (lon + 180) * Math.PI / 180;
-  const R = 200;
-  let x = R * Math.sin(phi) * Math.cos(theta);
-  let y = R * Math.cos(phi);
-  let z = R * Math.sin(phi) * Math.sin(theta);
-  let x2 = x * Math.cos(rotY) - z * Math.sin(rotY);
-  let z2 = x * Math.sin(rotY) + z * Math.cos(rotY);
-  let y2 = y * Math.cos(rotX) - z2 * Math.sin(rotX);
-  let z3 = y * Math.sin(rotX) + z2 * Math.cos(rotX);
-  return { x: x2, y: y2, z: z3 };
-}
-
-const continents = [
-  [[70,-170],[72,-130],[65,-90],[50,-60],[30,-80],[25,-100],[30,-120],[50,-130],[60,-150],[70,-170]],
-  [[10,-75],[5,-35],[-10,-35],[-35,-55],[-55,-70],[-40,-65],[-20,-40],[0,-50],[10,-75]],
-  [[35,-10],[40,0],[45,10],[50,5],[55,10],[60,25],[70,30],[65,50],[55,40],[45,30],[40,25],[35,25],[35,-10]],
-  [[35,-10],[35,35],[20,40],[10,45],[0,40],[-15,40],[-35,20],[-35,18],[-5,10],[5,-5],[15,-15],[35,-10]],
-  [[65,50],[70,140],[60,160],[50,140],[35,130],[20,110],[10,105],[5,100],[10,80],[25,65],[35,50],[45,50],[55,70],[65,50]],
-  [[-15,130],[-10,150],[-25,153],[-35,150],[-38,145],[-35,115],[-20,115],[-15,130]]
-];
-
-function drawGlobe() {
-  const W = canvas.width / (window.devicePixelRatio || 1);
-  const H = canvas.height / (window.devicePixelRatio || 1);
-  if (!W || !H) { requestAnimationFrame(drawGlobe); return; }
-  const cx = W/2, cy = H/2;
-
-  ctx.clearRect(0, 0, W, H);
-
-  // Glow backdrop
-  const grd = ctx.createRadialGradient(cx, cy, 180, cx, cy, 260);
-  grd.addColorStop(0, 'rgba(0,255,136,0.05)');
-  grd.addColorStop(1, 'transparent');
-  ctx.fillStyle = grd;
-  ctx.fillRect(0, 0, W, H);
-
-  // Ocean
-  ctx.beginPath();
-  ctx.arc(cx, cy, 200, 0, Math.PI*2);
-  ctx.fillStyle = '#0a2540';
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(0,255,136,0.3)';
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-
-  // Grid
-  ctx.strokeStyle = 'rgba(0,255,136,0.08)';
-  ctx.lineWidth = 0.5;
-  for (let lat = -60; lat <= 60; lat += 30) {
-    ctx.beginPath();
-    for (let lon = 0; lon <= 360; lon += 5) {
-      const p = project(lat, lon - 180);
-      if (p.z > 0) ctx.lineTo(cx+p.x, cy-p.y);
-      else ctx.moveTo(cx+p.x, cy-p.y);
-    }
-    ctx.stroke();
-  }
-  for (let lon = -180; lon < 180; lon += 30) {
-    ctx.beginPath();
-    for (let lat = -90; lat <= 90; lat += 5) {
-      const p = project(lat, lon);
-      if (p.z > 0) ctx.lineTo(cx+p.x, cy-p.y);
-      else ctx.moveTo(cx+p.x, cy-p.y);
-    }
-    ctx.stroke();
-  }
-
-  // Continents
-  ctx.strokeStyle = 'rgba(0,255,136,0.6)';
-  ctx.fillStyle = 'rgba(0,255,136,0.12)';
-  ctx.lineWidth = 1.2;
-  continents.forEach(cont => {
-    ctx.beginPath();
-    let started = false;
-    cont.forEach(([lat, lon]) => {
-      const p = project(lat, lon);
-      if (p.z > 0) {
-        if (!started) { ctx.moveTo(cx+p.x, cy-p.y); started = true; }
-        else ctx.lineTo(cx+p.x, cy-p.y);
-      } else { started = false; }
+    // ═══════════════════════════════════════════════
+    // 3D 地球滑鼠與觸控互動監聽
+    // ═══════════════════════════════════════════════
+    canvas.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      lastX = e.clientX;
+      lastY = e.clientY;
     });
-    ctx.fill();
-    ctx.stroke();
-  });
 
-  // Country dots
-  state.countries.forEach(c => {
-    const p = project(c.lat, c.lon);
-    if (p.z > 0) {
-      ctx.beginPath();
-      ctx.arc(cx+p.x, cy-p.y, 5, 0, Math.PI*2);
-      ctx.fillStyle = '#00ff88';
-      ctx.fill();
-      ctx.fillStyle = '#fff';
-      ctx.font = '10px "Noto Sans TC"';
-      ctx.fillText(c.name, cx+p.x+8, cy-p.y+4);
+    // 🛠️ 修正滑鼠拖曳旋轉的體感方向，同步改為減號（-=）
+    canvas.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      let dx = e.clientX - lastX;
+      let dy = e.clientY - lastY;
+      rotY -= dx * 0.005; 
+      rotX += dy * 0.005;
+      if (rotX > Math.PI / 2.2) rotX = Math.PI / 2.2;
+      if (rotX < -Math.PI / 2.2) rotX = -Math.PI / 2.2;
+      lastX = e.clientX;
+      lastY = e.clientY;
+    });
+
+    window.addEventListener('mouseup', () => { isDragging = false; });
+
+    canvas.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        isDragging = true;
+        lastX = e.touches[0].clientX;
+        lastY = e.touches[0].clientY;
+      }
+    }, { passive: true });
+
+    // 🛠️ 修正手機觸控滑動的體感方向，同步改為減號（-=）
+    canvas.addEventListener('touchmove', (e) => {
+      if (!isDragging || e.touches.length !== 1) return;
+      let dx = e.touches[0].clientX - lastX;
+      let dy = e.touches[0].clientY - lastY;
+      rotY -= dx * 0.008; 
+      rotX += dy * 0.008;
+      if (rotX > Math.PI / 2.2) rotX = Math.PI / 2.2;
+      if (rotX < -Math.PI / 2.2) rotX = -Math.PI / 2.2;
+      lastX = e.touches[0].clientX;
+      lastY = e.touches[0].clientY;
+    }, { passive: true });
+
+    window.addEventListener('touchend', () => { isDragging = false; });
+
+    // 地球節點點擊判定邏輯
+    canvas.addEventListener('click', (e) => {
+      if (Math.abs(e.clientX - lastX) > 5 || Math.abs(e.clientY - lastY) > 5) return; // 屬於拖曳不觸發點擊
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const mx = (e.clientX - rect.left) * dpr;
+      const my = (e.clientY - rect.top) * dpr;
+      const W = canvas.width / dpr, H = canvas.height / dpr;
+      const cx = W / 2, cy = H / 2;
+      
+      let found = null;
+      state.countries.forEach(c => {
+        let p = project(c.lat, c.lon);
+        if (p.z > 0) {
+          let dx = (cx + p.x) * dpr - mx;
+          let dy = (cy - p.y) * dpr - my;
+          if (Math.sqrt(dx * dx + dy * dy) < 22 * dpr) found = c;
+        }
+      });
+
+      if (found) {
+        state.selectedCountry = found;
+        openCountryInfo(found, e.clientX, e.clientY);
+      } else {
+        closeCountryInfo();
+      }
+    });
+
+    // ═══════════════════════════════════════════════
+    // UI 控制與遊戲面板操作邏輯
+    // ═══════════════════════════════════════════════
+    function openCountryInfo(c, clientX, clientY) {
+      const panel = document.getElementById('country-info');
+      document.getElementById('ci-name').textContent = c.name;
+      
+      let cleanTotal = (c.solar || 0) + (c.wind || 0) + (c.nuclear || 0);
+      document.getElementById('ci-details').innerHTML = `
+        <div class="flex justify-between"><span class="text-slate-400">產業定位:</span><span class="text-emerald-300 font-medium">${c.economy}</span></div>
+        <div class="h-px bg-emerald-500/10 my-1.5"></div>
+        <div class="space-y-1">
+          <div class="flex justify-between"><span>☀️ 太陽能 Solar</span><span>${c.solar}%</span></div>
+          <div class="flex justify-between"><span>💨 風力發電 Wind</span><span>${c.wind}%</span></div>
+          <div class="flex justify-between"><span>⚛️ 核能發電 Nuclear</span><span>${c.nuclear}%</span></div>
+          <div class="flex justify-between text-slate-500"><span>🛢️ 石油產能 Oil</span><span>${c.oil}%</span></div>
+          <div class="flex justify-between text-slate-500"><span>⚫ 燃煤發電 Coal</span><span>${c.coal}%</span></div>
+        </div>
+        <div class="h-px bg-emerald-500/10 my-1.5"></div>
+        <div class="flex justify-between font-bold text-emerald-400"><span>清潔能源總比:</span><span>${cleanTotal}%</span></div>
+      `;
+
+      // 決定浮動面板在畫面上的放置位置
+      let x = clientX + 15;
+      let y = clientY + 15;
+      if (x + 280 > window.innerWidth) x = window.innerWidth - 300;
+      if (y + 220 > window.innerHeight) y = window.innerHeight - 240;
+      
+      panel.style.left = `${x}px`;
+      panel.style.top = `${y}px`;
+      panel.style.opacity = '1';
+      panel.style.transform = 'translateY(0)';
     }
-  });
 
-  if (autoRotate) rotY -= 0.001;
-  requestAnimationFrame(drawGlobe);
-}
-
-// Country click
-canvas.addEventListener('click', e => {
-  const rect = canvas.getBoundingClientRect();
-  const dpr = window.devicePixelRatio || 1;
-  const mx = (e.clientX - rect.left) * dpr;
-  const my = (e.clientY - rect.top)  * dpr;
-  const W = canvas.width / dpr, H = canvas.height / dpr;
-  const cx = W/2, cy = H/2;
-  let found = null;
-  state.countries.forEach(c => {
-    const p = project(c.lat, c.lon);
-    if (p.z > 0) {
-      const dx = (cx+p.x)*dpr - mx, dy = (cy-p.y)*dpr - my;
-      if (Math.sqrt(dx*dx+dy*dy) < 20) found = c;
+    function closeCountryInfo() {
+      state.selectedCountry = null;
+      const panel = document.getElementById('country-info');
+      panel.style.opacity = '0';
+      panel.style.transform = 'translateY(15px)';
     }
-  });
-  const info = document.getElementById('country-info');
-  if (found) {
-    document.getElementById('ci-name').textContent = found.name;
-    document.getElementById('ci-details').innerHTML = `
-      <div>經濟規模: ${found.economy}</div>
-      ${found.solar   ? `<div>☀️ 太陽: ${found.solar}%</div>`   : ''}
-      ${found.oil     ? `<div>🛢️ 石油: ${found.oil}%</div>`     : ''}
-      ${found.coal    ? `<div>⚫ 煤: ${found.coal}%</div>`       : ''}
-      ${found.nuclear ? `<div>⚛️ 核能: ${found.nuclear}%</div>` : ''}
-      ${found.wind    ? `<div>💨 風能: ${found.wind}%</div>`     : ''}
-      ${found.gas     ? `<div>🔥 天然氣: ${found.gas}%</div>`   : ''}
-    `;
-    info.classList.remove('hidden');
-  } else {
-    info.classList.add('hidden');
-  }
-});
 
-// ─── Init ────────────────────────────────────────────────────
-resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
-window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 100));
-loadGame();   // 載入上次存檔（若有）
-render();
-drawGlobe();
-lucide.createIcons();
-initAPIs();
+    // 投資綠能機制
+    function investGreen() {
+      if (!state.selectedCountry) return;
+      if (state.funds < 200000) {
+        pushLog('[警告] 資金不足，無法進行綠能轉型投資！');
+        return;
+      }
+      state.funds -= 200000;
+      let c = state.selectedCountry;
+      
+      // 隨機調配綠能增加，石化燃料減少
+      let amt = Math.floor(Math.random() * 4) + 3; // 3~6%
+      if (c.oil >= amt) { c.oil -= amt; c.solar += amt; }
+      else if (c.coal >= amt) { c.coal -= amt; c.wind += amt; }
+      
+      pushLog(`[投資成功] 成功資助 ${c.name.split(' ')[0]} 轉型，綠能配比提升 ${amt}%！`);
+      openCountryInfo(c, parseInt(document.getElementById('country-info').style.left), parseInt(document.getElementById('country-info').style.top));
+      render();
+    }
 
-// ═══════════════════════════════════════════════
-// 背景音樂：播放自備音檔（Suno 生成的 bgm.mp3）
-// 透過 Web Audio 增益節點，音量可放大到超過 1.0（解決「太小聲」）
-// 預設關閉，由右下角按鈕開關；首次點擊才啟動（符合瀏覽器自動播放政策）
-// ═══════════════════════════════════════════════
-(function () {
-  let ctx, gain, started = false, on = false;
-  const VOLUME = 1.0;   // 音量：1.0 = 原始大小；想更大聲調高（例如 1.6、2.2），過高會破音
-  function build() {
-    if (started) return; started = true;
-    const audio = document.getElementById('bgm');
-    ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const src = ctx.createMediaElementSource(audio);
-    gain = ctx.createGain(); gain.gain.value = VOLUME;
-    src.connect(gain); gain.connect(ctx.destination);
-  }
-  window.toggleMusic = function (btn) {
-    const audio = document.getElementById('bgm');
-    if (!started) build();
-    if (ctx.state === 'suspended') ctx.resume();
-    on = !on;
-    if (on) { audio.play().catch(() => {}); if (btn) btn.textContent = '🔊'; }
-    else    { audio.pause();                if (btn) btn.textContent = '🔈'; }
-  };
-  // 想「進場第一次點擊就自動開音樂」可取消下一行的註解：
-  // window.addEventListener('pointerdown', function once(){ if(!on) toggleMusic(document.getElementById('music-btn')); window.removeEventListener('pointerdown', once); }, { once: true });
-})();
-</script>
+    // ═══════════════════════════════════════════════
+    // 全球股票市場連動交易系統 (與真實 Azure API 串接)
+    // ═══════════════════════════════════════════════
+    const PROXIES = [
+      '', // 優先直連
+      'https://cors-anywhere.herokuapp.com/',
+      'https://api.allorigins.win/raw?url='
+    ];
+
+    async function fetchDirect(url) {
+      for (let p of PROXIES) {
+        try {
+          let fullUrl = p ? (p.startsWith('http') && p.includes('allorigins') ? p + encodeURIComponent(url) : p + url) : url;
+          let res = await fetch(fullUrl, { signal: AbortSignal.timeout(4000) });
+          if (res.ok) return await res.json();
+        } catch(e) {}
+      }
+      throw new Error("All API pathways failed");
+    }
+
+    async function initAPIs() {
+      document.getElementById('api-status').textContent = 'Fetching Live API...';
+      try {
+        for (let s of state.stocks) {
+          let data;
+          if (s.symbol.includes('.') || s.symbol.includes('CO')) {
+            // 國際市場走跨國代碼路徑
+            data = await fetchDirect(`/api/quote-intl?symbol=${s.symbol}`);
+          } else {
+            // 美股走 Finnhub 代理
+            data = await fetchDirect(`/api/quote?symbol=${s.symbol}`);
+          }
+          if (data && typeof data.c === 'number') {
+            s.price = data.c;
+            s.chg = data.pc ? ((data.c - data.pc) / data.pc * 100) : 0;
+          }
+        }
+        document.getElementById('api-status').textContent = 'LIVE DATA SYNCED';
+        pushLog('[SYSTEM] 真實世界能源股市數據同步成功。');
+      } catch (e) {
+        document.getElementById('api-status').textContent = 'SIMULATED DATA';
+        pushLog('[WEB] 偵測到本機開發或跨域封鎖，啟動離線高頻股市模擬。');
+        // 離線模擬初次隨機波動
+        state.stocks.forEach(s => {
+          s.chg = (Math.random() * 8) - 4;
+          s.price = Math.max(1, s.price * (1 + s.chg / 100));
+        });
+      }
+      renderStockList();
+    }
+
+    function renderStockList() {
+      const tbody = document.getElementById('stock-list');
+      tbody.innerHTML = '';
+      state.stocks.forEach((s, idx) => {
+        let chgText = s.chg >= 0 ? `+${s.chg.toFixed(2)}%` : `${s.chg.toFixed(2)}%`;
+        let chgClass = s.chg >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        let row = document.createElement('tr');
+        row.className = 'hover:bg-emerald-500/5 transition-colors group border-b border-emerald-500/5';
+        row.innerHTML = `
+          <td class="py-2.5 font-bold text-slate-200">${s.symbol}<span class="block text-[10px] text-slate-500 font-normal group-hover:text-slate-400 transition-colors">${s.name}</span></td>
+          <td class="py-2.5 font-bold">$${s.price.toFixed(2)}</td>
+          <td class="py-2.5 font-medium ${chgClass}">${chgText}</td>
+          <td class="py-2.5 text-right font-semibold text-slate-400">${s.owned}</td>
+          <td class="py-2.5 text-right"><button onclick="openTradeModal(${idx})" class="bg-emerald-500/10 group-hover:bg-emerald-500/20 text-emerald-400 font-bold py-1 px-2.5 rounded border border-emerald-500/20 group-hover:border-emerald-500/40 text-[10px] tracking-wider transition-all">TRADE</button></td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function openTradeModal(idx) {
+      state.selectedStock = state.stocks[idx];
+      let s = state.selectedStock;
+      document.getElementById('modal-title').textContent = `${s.symbol} - ${s.name}`;
+      document.getElementById('modal-price').textContent = `$${s.price.toFixed(2)}`;
+      document.getElementById('modal-funds').textContent = `$${state.funds.toLocaleString()}`;
+      document.getElementById('modal-owned').textContent = `${s.owned} 股 (均價: $${s.avgCost.toFixed(2)})`;
+      
+      const m = document.getElementById('trade-modal');
+      m.classList.remove('opacity-0', 'pointer-events-none');
+      m.children[0].classList.remove('scale-95');
+    }
+
+    function closeTradeModal() {
+      const m = document.getElementById('trade-modal');
+      m.classList.add('opacity-0', 'pointer-events-none');
+      m.children[0].classList.add('scale-95');
+    }
+
+    function confirmBuy() {
+      let qty = parseInt(document.getElementById('trade-qty').value);
+      if (!qty || qty <= 0) return;
+      let s = state.selectedStock;
+      let cost = s.price * qty;
+      if (state.funds < cost) {
+        pushLog('[警告] 您的信貸資金不足以支付此筆股票買單！');
+        return;
+      }
+      state.funds -= cost;
+      let totalCost = (s.owned * s.avgCost) + cost;
+      s.owned += qty;
+      s.avgCost = totalCost / s.owned;
+      pushLog(`[證券交易所] 成功買入 ${qty} 股 ${s.symbol}，成交價 $${s.price.toFixed(2)}。`);
+      render();
+      closeTradeModal();
+    }
+
+    function confirmSell() {
+      let qty = parseInt(document.getElementById('trade-qty').value);
+      if (!qty || qty <= 0) return;
+      let s = state.selectedStock;
+      if (s.owned < qty) {
+        pushLog('[警告] 賣出失敗！持股庫存餘額不足。');
+        return;
+      }
+      let gain = s.price * qty;
+      state.funds += gain;
+      s.owned -= qty;
+      if (s.owned === 0) s.avgCost = 0;
+      pushLog(`[證券交易所] 成功賣出 ${qty} 股 ${s.symbol}，獲取資金 $${gain.toFixed(2)}。`);
+      render();
+      closeTradeModal();
+    }
+
+    // ═══════════════════════════════════════════════
+    // 回合結算與事件調度引擎
+    // ═══════════════════════════════════════════════
+    function nextTurn() {
+      state.turn++;
+      
+      // 1. 每回合被動資產結算發放
+      let cleanBonus = 0;
+      state.countries.forEach(c => {
+        let cleanRatio = (c.solar || 0) + (c.wind || 0) + (c.nuclear || 0);
+        cleanBonus += cleanRatio * 1500; // 綠能占比折算被動資金
+      });
+      state.funds += 150000 + cleanBonus; // 基本金 + 綠能分紅
+
+      // 2. 股市波動模擬 (在不重打 API 的回合內走隨機行走)
+      state.stocks.forEach(s => {
+        let changePercent = (Math.random() * 16 - 8) / 100; // -8% ~ +8%
+        s.price = Math.max(1, s.price * (1 + changePercent));
+        s.chg = changePercent * 100;
+      });
+
+      // 3. 隨機地緣政治與環境事件事件
+      triggerRandomEvent();
+
+      pushLog(`--- [第 ${state.turn} 回合宣告結束，進入全新局勢] ---`);
+      pushLog(`[財務結算] 收到基本稅收與綠能資產紅利：+$${(150000 + cleanBonus).toLocaleString()}`);
+      
+      saveGame(); // 自動儲存進度
+      render();
+    }
+
+    function triggerRandomEvent() {
+      const events = [
+        { msg: '🔥 [極端氣候] 全球多國遭遇史詩級熱浪，各國電網負載逼近崩潰臨界點！', effect: () => {} },
+        { msg: '🛢️ [地緣政治] 中東局勢再度緊繃，國際原油期貨單日暴漲 7%！', effect: () => {
+          let oil = state.stocks.find(s => s.symbol === 'XOM');
+          if (oil) { oil.price *= 1.12; oil.chg = 12; }
+        }},
+        { msg: '💨 [氣象報告] 北海風力全面停滯，部分歐洲綠能產權產能遭遇重挫。', effect: () => {
+          let oer = state.stocks.find(s => s.symbol === 'ORSTED.CO');
+          if (oer) { oer.price *= 0.88; oer.chg = -12; }
+        }},
+        { msg: '📜 [政策變更] 歐盟全面提高碳關稅限制，跨國石化重工遭到全面追稅。', effect: () => {} }
+      ];
+      if (Math.random() > 0.4) {
+        let ev = events[Math.floor(Math.random() * events.length)];
+        pushLog(ev.msg);
+        ev.effect();
+      }
+    }
+
+    function pushLog(text) {
+      state.log.unshift(text);
+      if (state.log.length > 50) state.log.pop();
+      
+      const container = document.getElementById('log-content');
+      container.innerHTML = state.log.map(l => {
+        let color = 'text-slate-400';
+        if (l.includes('[警告]')) color = 'text-rose-400 font-semibold';
+        if (l.includes('[投資成功]') || l.includes('成功買入')) color = 'text-emerald-400';
+        if (l.includes('---')) color = 'text-cyan-400 font-bold border-y border-cyan-500/10 py-0.5 block';
+        return `<div class="${color}">${l}</div>`;
+      }).join('');
+    }
+
+    function render() {
+      document.getElementById('stat-turn').textContent = state.turn;
+      document.getElementById('stat-funds').textContent = `$${Math.floor(state.funds).toLocaleString()}`;
+      
+      // 計算全球平均清潔能源占比
+      let totalClean = 0;
+      state.countries.forEach(c => { totalClean += (c.solar || 0) + (c.wind || 0) + (c.nuclear || 0); });
+      let avgClean = Math.round(totalClean / state.countries.length);
+      document.getElementById('stat-clean').textContent = `${avgClean}%`;
+
+      renderStockList();
+    }
+
+    // 本地持久化儲存進度 (Cookie/LocalStorage 防禦)
+    function saveGame() {
+      try { localStorage.setItem('ee_save', JSON.stringify({ turn: state.turn, funds: state.funds, stocks: state.stocks, countries: state.countries })); } catch(e){}
+    }
+
+    function loadGame() {
+      try {
+        let raw = localStorage.getItem('ee_save');
+        if (raw) {
+          let parsed = JSON.parse(raw);
+          state.turn = parsed.turn || 1;
+          state.funds = parsed.funds || 1000000;
+          if (parsed.stocks) state.stocks = parsed.stocks;
+          if (parsed.countries) state.countries = parsed.countries;
+          pushLog(`[SYSTEM] 已自動讀取上一存檔，歷史進度成功銜接。`);
+        }
+      } catch(e){}
+    }
+
+    // ═══════════════════════════════════════════════
+    // 背景音樂：雙首鋼琴音樂輪播控制系統 (BGM1 & BGM2)
+    // ═══════════════════════════════════════════════
+    (function () {
+      let ctx, gain, started = false, on = false;
+      let currentTrack = 1; // 追蹤目前正在輪播哪一首音軌
+      const VOLUME = 1.0;   // 基礎音量大小
+
+      // 初始化 Web Audio 音訊管道
+      function build() {
+        if (started) return;
+        started = true;
+        
+        ctx = new (window.AudioContext || window.webkitAudioContext)();
+        gain = ctx.createGain();
+        gain.gain.value = VOLUME;
+        gain.connect(ctx.destination);
+
+        const audio1 = document.getElementById('bgm1');
+        const audio2 = document.getElementById('bgm2');
+
+        // 將兩個 HTML 標籤音源線接入同一個控制器
+        const src1 = ctx.createMediaElementSource(audio1);
+        src1.connect(gain);
+        const src2 = ctx.createMediaElementSource(audio2);
+        src2.connect(gain);
+
+        // 監聽 BGM1 播放結束事件，自動無縫呼叫 BGM2
+        audio1.addEventListener('ended', () => {
+          console.log("BGM1 播放完畢，為您切換至第二首抒情鋼琴曲...");
+          currentTrack = 2;
+          if (on) audio2.play().catch(e => console.log("音樂阻擋防禦:", e));
+        });
+
+        // 監聽 BGM2 播放結束事件，自動循環滾回 BGM1
+        audio2.addEventListener('ended', () => {
+          console.log("BGM2 播放完畢，重新循環回到首支鋼琴旋律...");
+          currentTrack = 1;
+          if (on) audio1.play().catch(e => console.log("音樂阻擋防禦:", e));
+        });
+      }
+
+      // 控制面板右下角音樂圖示的點擊事件
+      window.toggleMusic = function (btn) {
+        const audio1 = document.getElementById('bgm1');
+        const audio2 = document.getElementById('bgm2');
+        
+        if (!started) build();
+
+        // 解鎖瀏覽器安全政策
+        if (ctx.state === 'suspended') {
+          ctx.resume();
+        }
+
+        if (!on) {
+          on = true;
+          btn.innerHTML = `<i data-lucide="volume-2" class="w-4 h-4 text-emerald-400 animate-pulse"></i>`;
+          
+          // 點擊開啟時，根據目前時空進度決定播放哪一軌
+          if (currentTrack === 1) {
+            audio1.play().catch(e => console.log(e));
+          } else {
+            audio2.play().catch(e => console.log(e));
+          }
+        } else {
+          on = false;
+          btn.innerHTML = `<i data-lucide="volume-x" class="w-4 h-4 text-slate-400"></i>`;
+          // 雙軌齊推暫停，確保聲音能立刻斷乾淨
+          audio1.pause();
+          audio2.pause();
+        }
+        lucide.createIcons();
+      };
+    })();
+
+    // 啟動點
+    loadGame();
+    render();
+    drawGlobe();
+    lucide.createIcons();
+    initAPIs();
+  </script>
 </body>
 </html>
