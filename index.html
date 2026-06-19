@@ -207,12 +207,15 @@
   </div>
 </div>
 
-<!-- 背景音樂：自備音檔（請把 bgm.mp3 放到 repo 根目錄，與 index.html 同層） -->
-<audio id="bgm" src="bgm.mp3" loop preload="auto"></audio>
+<!-- 背景音樂：兩首輪流播放（請把 bgm1.mp3、bgm2.mp3 放到 repo 根目錄，與 index.html 同層） -->
+<audio id="bgm" preload="auto"></audio>
 
-<!-- 背景音樂開關（右下角浮動） -->
-<button id="music-btn" onclick="toggleMusic(this)" title="背景音樂 開/關"
-  class="fixed bottom-3 right-3 z-50 w-11 h-11 rounded-full flex items-center justify-center text-lg bg-slate-800/80 border border-emerald-500/40 text-emerald-300 shadow-lg hover:bg-slate-700/80 transition active:scale-95">🔈</button>
+<!-- 背景音樂控制（精簡、半透明；平時淡出，滑鼠移上去才變清楚） -->
+<div id="music-ctrl" onpointerdown="event.stopPropagation()"
+  class="fixed bottom-3 right-3 z-50 flex items-center gap-2 px-2.5 py-1.5 rounded-full bg-slate-900/55 backdrop-blur border border-white/10 text-slate-300 shadow opacity-60 hover:opacity-100 transition">
+  <button id="music-toggle" onclick="musicToggle()" title="播放／停止" class="text-base leading-none">▶️</button>
+  <input id="music-vol" type="range" min="0" max="2" step="0.05" value="1" oninput="musicVolume(this.value)" title="音量" class="w-16 accent-emerald-400 cursor-pointer">
+</div>
 
 <script>
 // ═══════════════════════════════════════════════
@@ -1076,31 +1079,60 @@ lucide.createIcons();
 initAPIs();
 
 // ═══════════════════════════════════════════════
-// 背景音樂：播放自備音檔（Suno 生成的 bgm.mp3）
-// 透過 Web Audio 增益節點，音量可放大到超過 1.0（解決「太小聲」）
-// 預設關閉，由右下角按鈕開關；首次點擊才啟動（符合瀏覽器自動播放政策）
+// 背景音樂：兩首輪流播放 + 自動開始 + 音量/播停控制
+// 兩首檔名：bgm1.mp3、bgm2.mp3（一首播完自動換下一首；只放一首也能用）
+// 因瀏覽器政策，無法「載入即出聲」→ 改為第一次互動（點/觸/按鍵）時自動開始
 // ═══════════════════════════════════════════════
 (function () {
-  let ctx, gain, started = false, on = false;
-  const VOLUME = 1.0;   // 音量：1.0 = 原始大小；想更大聲調高（例如 1.6、2.2），過高會破音
-  function build() {
-    if (started) return; started = true;
-    const audio = document.getElementById('bgm');
+  const PLAYLIST = ['bgm1.mp3', 'bgm2.mp3'];   // 想只用一首：改成 ['bgm1.mp3']
+  const audio = document.getElementById('bgm');
+  let ctx, gain, started = false, idx = 0;
+
+  function ensureCtx() {
+    if (started) return;
+    started = true;
     ctx = new (window.AudioContext || window.webkitAudioContext)();
     const src = ctx.createMediaElementSource(audio);
-    gain = ctx.createGain(); gain.gain.value = VOLUME;
+    gain = ctx.createGain();
+    gain.gain.value = parseFloat(document.getElementById('music-vol').value) || 1;
     src.connect(gain); gain.connect(ctx.destination);
   }
-  window.toggleMusic = function (btn) {
-    const audio = document.getElementById('bgm');
-    if (!started) build();
+  function setIcon(playing) {
+    const b = document.getElementById('music-toggle');
+    if (b) b.textContent = playing ? '⏸️' : '▶️';
+  }
+  function playTrack(i) {
+    idx = ((i % PLAYLIST.length) + PLAYLIST.length) % PLAYLIST.length;
+    audio.src = PLAYLIST[idx];
+    audio.play().catch(() => {});
+  }
+  // 一首播完自動換下一首（輪流）
+  audio.addEventListener('ended', () => playTrack(idx + 1));
+
+  function startMusic() {
+    ensureCtx();
     if (ctx.state === 'suspended') ctx.resume();
-    on = !on;
-    if (on) { audio.play().catch(() => {}); if (btn) btn.textContent = '🔊'; }
-    else    { audio.pause();                if (btn) btn.textContent = '🔈'; }
+    if (!audio.src) playTrack(0); else audio.play().catch(() => {});
+    setIcon(true);
+  }
+  window.musicToggle = function () {
+    ensureCtx();
+    if (ctx.state === 'suspended') ctx.resume();
+    if (audio.paused) { if (!audio.src) playTrack(0); else audio.play().catch(() => {}); setIcon(true); }
+    else { audio.pause(); setIcon(false); }
   };
-  // 想「進場第一次點擊就自動開音樂」可取消下一行的註解：
-  // window.addEventListener('pointerdown', function once(){ if(!on) toggleMusic(document.getElementById('music-btn')); window.removeEventListener('pointerdown', once); }, { once: true });
+  window.musicVolume = function (v) {
+    ensureCtx();
+    gain.gain.value = parseFloat(v);   // 0~2，可放大到超過 1（音量滑桿）
+  };
+  // 自動開始：第一次點/觸/按鍵就播（音樂控制本身已 stopPropagation，不會誤觸）
+  function autoStart() {
+    startMusic();
+    window.removeEventListener('pointerdown', autoStart);
+    window.removeEventListener('keydown', autoStart);
+  }
+  window.addEventListener('pointerdown', autoStart);
+  window.addEventListener('keydown', autoStart);
 })();
 </script>
 </body>
