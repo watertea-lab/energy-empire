@@ -47,8 +47,13 @@
     .btn-red { background: rgba(255,80,80,0.15); border: 1px solid rgba(255,80,80,0.4); color: #f87171; border-radius: 6px; padding: 6px 16px; cursor: pointer; font-size: 13px; }
     .btn-gray { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: #9ca3af; border-radius: 6px; padding: 6px 16px; cursor: pointer; font-size: 13px; }
     /* Portfolio table */
-    .portfolio-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid rgba(0,255,136,0.08); font-size: 12px; gap: 4px; }
+    .portfolio-row { display: grid; grid-template-columns: 76px 1fr 1.3fr 1.3fr; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid rgba(0,255,136,0.08); font-size: 12px; }
+    .portfolio-row > span:nth-child(1) { text-align: left; }
+    .portfolio-row > span:nth-child(2) { text-align: center; }
+    .portfolio-row > span:nth-child(3) { text-align: right; }
+    .portfolio-row > span:nth-child(4) { text-align: right; white-space: nowrap; }
     .portfolio-row:last-child { border-bottom: none; }
+    .portfolio-total { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
     /* API status dot */
     .api-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 4px; }
     .api-dot.ok { background: #00ff88; }
@@ -120,7 +125,7 @@
             <div id="rt-aqi" class="text-gray-200 font-bold">載入中...</div>
           </div>
         </div>
-        <div id="api-sources" class="text-xs text-emerald-900/60 mt-1.5">資料來源：Open-Meteo（天氣／太陽能／空品）；油價為市場推算</div>
+        <div id="api-sources" class="text-xs text-emerald-900/60 mt-1.5">資料來源：Open-Meteo（天氣／太陽能／空品）；WTI 油價來自 Yahoo Finance</div>
       </div>
 
       <!-- Stock Market -->
@@ -437,45 +442,23 @@ async function fetchTaiwanPower() {
   return false;
 }
 
-// ② 油價：使用匯率推算，但不覆蓋 Finnhub 已更新的真實股價
+// ② 油價：抓真實 WTI 原油期貨 (CL=F)，走現有 Yahoo 代理；拿不到就誠實提示，不湊假數字
 async function fetchOilPrice() {
-  // 方法一：用 exchangerate.host 免費匯率API（無需key，原生CORS）
   try {
-    const data = await fetchDirect(
-      'https://open.er-api.com/v6/latest/USD'
-    );
-    if (data?.rates) {
-      const twd = data.rates.TWD || 32;
-      const baseOil = 78 + (twd - 30) * 1.2;
-      const oil = Math.max(55, Math.min(120, baseOil));
-      // 只更新儀表板油價顯示，不動 XOM 股價（由 Finnhub 負責）
-      setDashboard('rt-oil', `$${oil.toFixed(2)}/桶 (匯率推算)`);
-      addLog(`✓ 油價推算: $${oil.toFixed(1)}/桶（USD/TWD=${twd.toFixed(2)}）`);
+    const data = await fetchDirect(`/api/quote-intl?symbol=${encodeURIComponent('CL=F')}`);
+    if (data && typeof data.c === 'number' && data.c > 0) {
+      const oil = data.c;
+      const change = (typeof data.pc === 'number' && data.pc > 0)
+        ? ((data.c - data.pc) / data.pc * 100).toFixed(2) : null;
+      setDashboard('rt-oil', `$${oil.toFixed(2)}/桶 (WTI 即時)`);
+      addLog(`✓ WTI 原油: $${oil.toFixed(2)}/桶${change !== null ? `（${parseFloat(change) >= 0 ? '+' : ''}${change}%）` : ''}`);
       return true;
     }
-  } catch (e) {
-    // 方法一失敗，試方法二
-  }
+  } catch (e) { /* 落到誠實提示 */ }
 
-  // 方法二：CoinGecko 免費API（無需key，原生CORS）
-  try {
-    const data = await fetchDirect(
-      'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd'
-    );
-    if (data?.bitcoin?.usd) {
-      const btc = data.bitcoin.usd;
-      const oil = Math.max(55, Math.min(120, 70 + (btc / 100000) * 30));
-      // 同樣只更新儀表板，不動 XOM 股價
-      setDashboard('rt-oil', `$${oil.toFixed(2)}/桶 (市場推算)`);
-      addLog(`✓ 油價市場推算: $${oil.toFixed(1)}/桶`);
-      return true;
-    }
-  } catch (e) {
-    // 兩個都失敗
-  }
-
-  setDashboard('rt-oil', '無法連線 --', false);
-  addLog('⚠ 油價API均失敗');
+  // 真實油價拿不到 → 誠實顯示，不再用匯率/BTC 推算假數字
+  setDashboard('rt-oil', '暫無資訊，請查市場', false);
+  addLog('⚠ 真實油價資訊目前無法取得，請詳查市場資訊');
   return false;
 }
 
@@ -806,7 +789,7 @@ function renderPortfolio() {
       <span class="${pnl>=0?'text-emerald-400':'text-red-400'}">${pnl>=0?'+':''}${fmtNT(pnl)} (${pct}%)</span>
     </div>`;
   }).join('') +
-  `<div class="portfolio-row mt-1 border-t border-emerald-500/20 pt-1">
+  `<div class="portfolio-total mt-1 border-t border-emerald-500/20 pt-1">
     <span class="text-emerald-300 font-bold">總損益</span>
     <span class="${totalPnl>=0?'text-emerald-400 font-bold':'text-red-400 font-bold'}">${totalPnl>=0?'+':''}${fmtNT(totalPnl)}</span>
   </div>`;
