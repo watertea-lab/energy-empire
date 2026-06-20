@@ -86,7 +86,7 @@
     <aside class="w-full overflow-y-auto p-2 sm:p-3 space-y-2 sm:space-y-3 border-t border-emerald-900/30" style="background:rgba(5,10,20,0.95);max-height:50%;-webkit-overflow-scrolling:touch;">
 
       <!-- Energy Market -->
-      <div class="panel rounded-lg p-2 sm:p-4 slide-up">
+      <div class="panel rounded-lg p-2 sm:p-4 slide-up game-only">
         <h2 class="text-emerald-400 font-bold mb-2 flex items-center gap-1 text-xs sm:text-sm" style="font-family:'Orbitron',monospace;">
           <i data-lucide="zap" style="width:14px;height:14px;"></i> 能源市場
         </h2>
@@ -116,7 +116,7 @@
             <div id="rt-aqi" class="text-gray-200 font-bold">載入中...</div>
           </div>
         </div>
-        <div id="api-sources" class="text-xs text-emerald-900/60 mt-1.5">資料來源：Open-Meteo / EIA</div>
+        <div id="api-sources" class="text-xs text-emerald-900/60 mt-1.5">資料來源：Open-Meteo（天氣／太陽能／空品）；油價為市場推算</div>
       </div>
 
       <!-- Stock Market -->
@@ -217,12 +217,13 @@
 </div>
 
 <!-- 背景音樂：兩首輪流播放（請把 bgm.mp3、bgm2.mp3 放到 repo 根目錄，與 index.html 同層） -->
-<audio id="bgm" preload="auto"></audio>
+<audio id="bgm" preload="none"></audio>
 
 <!-- 背景音樂控制（精簡、半透明；平時淡出，滑鼠移上去才變清楚） -->
 <div id="music-ctrl" onpointerdown="event.stopPropagation()"
-  class="fixed bottom-3 right-3 z-50 flex items-center gap-2 px-2.5 py-1.5 rounded-full bg-slate-900/55 backdrop-blur border border-white/10 text-slate-300 shadow opacity-60 hover:opacity-100 transition">
-  <button id="music-toggle" onclick="musicToggle()" title="播放／停止" class="text-base leading-none">▶️</button>
+  class="fixed bottom-3 right-3 z-50 flex items-center gap-2 px-2.5 py-1.5 rounded-full bg-slate-900/55 backdrop-blur border border-white/10 text-slate-300 shadow opacity-70 hover:opacity-100 transition">
+  <span class="text-sm opacity-80 leading-none select-none">🎵</span>
+  <button id="music-toggle" onclick="musicToggle()" title="播放／停止背景音樂" class="text-base leading-none">▶️</button>
   <input id="music-vol" type="range" min="0" max="1" step="0.05" value="1" oninput="musicVolume(this.value)" title="音量" class="w-16 accent-emerald-400 cursor-pointer">
 </div>
 
@@ -765,8 +766,9 @@ function renderStocks() {
   document.getElementById('stock-market').innerHTML = header +
     state.stocks.map(s => {
       const holding = state.portfolio.find(p => p.ticker === s.ticker);
-      const pnl = holding ? ((s.price - holding.avgCost) / holding.avgCost * 100).toFixed(1) : null;
       const twd = toTWD(s.price, s.curCode);
+      // 損益用「台幣現價 vs 台幣成本」比較（avgCost 存的是台幣）；不可拿原幣價比台幣成本
+      const pnl = (holding && twd != null) ? ((twd - holding.avgCost) / holding.avgCost * 100).toFixed(1) : null;
       const twdStr = (twd != null) ? `NT$${Math.round(twd).toLocaleString()}` : '—';
       return `<div class="flex justify-between items-center text-emerald-200 gap-1">
         <span class="font-mono flex-shrink-0 text-xs" style="width:50px">${s.ticker}</span>
@@ -1167,14 +1169,7 @@ initAPIs();
     audio.volume = Math.max(0, Math.min(1, parseFloat(v)));   // <audio> 音量 0~1
   };
 
-  // 自動開始：第一次點/觸/按鍵就播（控制條本身已 stopPropagation，不會誤觸）
-  function autoStart() {
-    if (!audio.src) playTrack(0); else audio.play().then(() => setIcon(true)).catch(() => {});
-    window.removeEventListener('pointerdown', autoStart);
-    window.removeEventListener('keydown', autoStart);
-  }
-  window.addEventListener('pointerdown', autoStart);
-  window.addEventListener('keydown', autoStart);
+  // 不自動播放：完全由使用者點右下角 ▶️ 控制鈕才開始（尊重使用者選擇、符合現代瀏覽器政策）
 })();
 </script>
 </body>
