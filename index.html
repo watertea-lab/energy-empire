@@ -36,7 +36,11 @@
       width: 100%;
       margin-top: 4px;
       font-size: 13px;
+      color-scheme: dark;
     }
+    /* 桌機下拉清單：強制深底淺字，解決白底淺綠字看不清 */
+    .modal-box select option { background-color: #0b1220; color: #d1fae5; }
+    .modal-box select option:checked { background-color: #065f46; color: #ffffff; }
     .modal-box label { font-size: 12px; color: #6ee7b7; display: block; margin-top: 10px; }
     .btn-green { background: rgba(0,255,136,0.15); border: 1px solid rgba(0,255,136,0.4); color: #00ff88; border-radius: 6px; padding: 6px 16px; cursor: pointer; font-size: 13px; transition: background 0.2s; }
     .btn-green:hover { background: rgba(0,255,136,0.3); }
