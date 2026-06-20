@@ -61,7 +61,7 @@
     <h1 class="text-lg sm:text-xl font-bold glow" style="font-family:'Orbitron',monospace; color:#00ff88;">Energy Empire</h1>
     <div class="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-emerald-300">
       <span class="game-only">回合 <strong id="turn-num">1</strong></span>
-      <span class="invest-only hidden">📈 模擬投資中</span>
+      <span class="invest-only hidden">📈 模擬股票投資中</span>
       <span>現金 NT$<strong id="player-cash">10,000,000</strong></span>
       <span>淨值 NT$<strong id="net-worth">10,000,000</strong> <span id="net-return" class="text-emerald-400">+0.0%</span></span>
       <span id="api-status" title="API連線狀態"><span class="api-dot loading"></span></span>
@@ -143,7 +143,7 @@
         <!-- 模式切換 -->
         <div class="flex gap-1 sm:gap-2 mb-2">
           <button id="mode-game" onclick="switchMode('game')">🎮 遊戲展示</button>
-          <button id="mode-invest" onclick="switchMode('invest')">📈 模擬投資</button>
+          <button id="mode-invest" onclick="switchMode('invest')">📈 模擬股票投資</button>
         </div>
         <!-- 投資模式資訊列 -->
         <div id="invest-info" class="invest-only hidden mb-2 text-[11px] sm:text-xs text-emerald-200/90 bg-slate-900/40 border border-emerald-900/40 rounded px-2 py-1.5"></div>
@@ -238,7 +238,7 @@ const state = {
   turn: 1,
   cash: 10000000,
   energyInvested: 0,
-  mode: 'game',            // 'game' 遊戲展示 ｜ 'invest' 模擬投資
+  mode: 'game',            // 'game' 遊戲展示 ｜ 'invest' 模擬股票投資
   investStart: null,       // 投資模式起始時間（ms）
   energy: { solar: 15, oil: 35, coal: 25, nuclear: 15, wind: 10 },
   stocks: [
@@ -374,7 +374,7 @@ function settle() {
 
   const fmtPct = v => (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
   let html = '';
-  html += `<div class="text-emerald-400/70">${state.mode === 'invest' ? '模擬投資結算' : '第 ' + state.turn + ' 回合結算'}</div>`;
+  html += `<div class="text-emerald-400/70">${state.mode === 'invest' ? '模擬股票投資結算' : '第 ' + state.turn + ' 回合結算'}</div>`;
   html += `<div style="height:6px"></div>`;
   html += `<div>起始資金：${fmtNT(START_CAPITAL)}</div>`;
   html += `<div>現金：${fmtNT(state.cash)}</div>`;
@@ -762,6 +762,7 @@ function renderStocks() {
     <span class="flex-1 truncate">名稱</span>
     <span class="flex-shrink-0 text-right" style="min-width:58px">原幣價</span>
     <span class="flex-shrink-0 text-right" style="min-width:72px">台幣價</span>
+    <span class="flex-shrink-0 text-right" style="min-width:56px">損益</span>
   </div>`;
   document.getElementById('stock-market').innerHTML = header +
     state.stocks.map(s => {
@@ -775,7 +776,7 @@ function renderStocks() {
         <span class="text-emerald-400/60 text-xs flex-1 truncate">${s.name}</span>
         <span class="font-bold text-xs flex-shrink-0 text-right" style="min-width:58px">${s.cur || '$'}${s.price.toFixed(1)}</span>
         <span class="text-xs flex-shrink-0 text-right text-cyan-300/80" style="min-width:72px">${twdStr}</span>
-        ${pnl !== null ? `<span class="text-xs ${parseFloat(pnl)>=0?'text-emerald-400':'text-red-400'}">${pnl>=0?'+':''}${pnl}%</span>` : ''}
+        ${(pnl !== null) ? `<span class="text-xs flex-shrink-0 text-right ${parseFloat(pnl)>=0?'text-emerald-400':'text-red-400'}" style="min-width:56px">${pnl>=0?'+':''}${pnl}%</span>` : `<span class="flex-shrink-0" style="min-width:56px"></span>`}
       </div>`;
     }).join('');
 }
@@ -827,7 +828,10 @@ function updateHUD() {
 }
 
 function addLog(msg) {
-  state.log.push(`[回合${state.turn}] ${msg}`);
+  const tag = state.mode === 'invest'
+    ? new Date().toLocaleTimeString('zh-TW', { hour12: false, timeZone: 'Asia/Taipei' })  // 投資模式：台北時間
+    : `回合${state.turn}`;                                                                  // 遊戲模式：回合
+  state.log.push(`[${tag}] ${msg}`);
 }
 
 // ─── 雙模式 + 各自獨立存檔（localStorage 持久化）─────────────
@@ -862,7 +866,7 @@ function freshInvest() {
 }
 function resetGame() {
   const msg = state.mode === 'invest'
-    ? '確定要開始一段新的模擬投資嗎？將以 NT$10,000,000、從現在重新計時。'
+    ? '確定要開始一段新的模擬股票投資嗎？將以 NT$10,000,000、從現在重新計時。'
     : '確定要重新開始嗎？目前的資金、持倉與回合將被清除。';
   if (!confirm(msg)) return;
   try { localStorage.removeItem(SAVE_KEYS[state.mode]); } catch (e) {}
