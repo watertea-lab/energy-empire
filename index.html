@@ -555,7 +555,13 @@ async function initAPIs() {
     fetchFxRates()
   ]);
   // Finnhub 最後跑，確保真實股價不被覆蓋
-  await fetchRealStocks();
+  // 首次若整批失敗（API 瞬斷/限速），3 秒後自動重試一次，避免價格卡在預設值
+  const stocksOk = await fetchRealStocks();
+  if (!stocksOk) {
+    addLog('⚠ 首次報價取得失敗，3 秒後自動重試…');
+    await new Promise(r => setTimeout(r, 3000));
+    await fetchRealStocks();
+  }
 
   const anyOk = results.some(r => r.value === true);
   state.apiStatus = anyOk ? 'ok' : 'fail';
