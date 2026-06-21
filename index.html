@@ -1142,6 +1142,11 @@ initAPIs();
   let idx = 0;
   const volEl = document.getElementById('music-vol');
   audio.volume = volEl ? (parseFloat(volEl.value) || 1) : 1;
+  // iOS（iPhone/iPad）的 WebKit 不允許網頁以 JS 調整音量（audio.volume 唯讀，
+  // 只能用實體音量鍵），滑桿會變成無效控制 → 偵測到 iOS 就隱藏滑桿，只留播放/停止。
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (isIOS && volEl) volEl.style.display = 'none';
 
   function setIcon(playing) {
     const b = document.getElementById('music-toggle');
